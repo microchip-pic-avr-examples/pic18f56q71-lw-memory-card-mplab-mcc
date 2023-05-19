@@ -68,6 +68,7 @@
 #define CARD_DETECT_SetOpenDrain()       do { ODCONAbits.ODCA1 = 1; } while(0)
 #define CARD_DETECT_SetAnalogMode()      do { ANSELAbits.ANSELA1 = 1; } while(0)
 #define CARD_DETECT_SetDigitalMode()     do { ANSELAbits.ANSELA1 = 0; } while(0)
+#define RA1_SetInterruptHandler  CARD_DETECT_SetInterruptHandler
 
 // get/set RA5 aliases
 #define CARD_CS_TRIS                 TRISAbits.TRISA5
@@ -90,44 +91,44 @@
 #define CARD_CS_SetDigitalMode()     do { ANSELAbits.ANSELA5 = 0; } while(0)
 
 // get/set RB4 aliases
-#define IO_RB4_TRIS                 TRISBbits.TRISB4
-#define IO_RB4_LAT                  LATBbits.LATB4
-#define IO_RB4_PORT                 PORTBbits.RB4
-#define IO_RB4_WPU                  WPUBbits.WPUB4
-#define IO_RB4_OD                   ODCONBbits.ODCB4
-#define IO_RB4_ANS                  ANSELBbits.ANSELB4
-#define IO_RB4_SetHigh()            do { LATBbits.LATB4 = 1; } while(0)
-#define IO_RB4_SetLow()             do { LATBbits.LATB4 = 0; } while(0)
-#define IO_RB4_Toggle()             do { LATBbits.LATB4 = ~LATBbits.LATB4; } while(0)
-#define IO_RB4_GetValue()           PORTBbits.RB4
-#define IO_RB4_SetDigitalInput()    do { TRISBbits.TRISB4 = 1; } while(0)
-#define IO_RB4_SetDigitalOutput()   do { TRISBbits.TRISB4 = 0; } while(0)
-#define IO_RB4_SetPullup()          do { WPUBbits.WPUB4 = 1; } while(0)
-#define IO_RB4_ResetPullup()        do { WPUBbits.WPUB4 = 0; } while(0)
-#define IO_RB4_SetPushPull()        do { ODCONBbits.ODCB4 = 0; } while(0)
-#define IO_RB4_SetOpenDrain()       do { ODCONBbits.ODCB4 = 1; } while(0)
-#define IO_RB4_SetAnalogMode()      do { ANSELBbits.ANSELB4 = 1; } while(0)
-#define IO_RB4_SetDigitalMode()     do { ANSELBbits.ANSELB4 = 0; } while(0)
+#define UART_TX_TRIS                 TRISBbits.TRISB4
+#define UART_TX_LAT                  LATBbits.LATB4
+#define UART_TX_PORT                 PORTBbits.RB4
+#define UART_TX_WPU                  WPUBbits.WPUB4
+#define UART_TX_OD                   ODCONBbits.ODCB4
+#define UART_TX_ANS                  ANSELBbits.ANSELB4
+#define UART_TX_SetHigh()            do { LATBbits.LATB4 = 1; } while(0)
+#define UART_TX_SetLow()             do { LATBbits.LATB4 = 0; } while(0)
+#define UART_TX_Toggle()             do { LATBbits.LATB4 = ~LATBbits.LATB4; } while(0)
+#define UART_TX_GetValue()           PORTBbits.RB4
+#define UART_TX_SetDigitalInput()    do { TRISBbits.TRISB4 = 1; } while(0)
+#define UART_TX_SetDigitalOutput()   do { TRISBbits.TRISB4 = 0; } while(0)
+#define UART_TX_SetPullup()          do { WPUBbits.WPUB4 = 1; } while(0)
+#define UART_TX_ResetPullup()        do { WPUBbits.WPUB4 = 0; } while(0)
+#define UART_TX_SetPushPull()        do { ODCONBbits.ODCB4 = 0; } while(0)
+#define UART_TX_SetOpenDrain()       do { ODCONBbits.ODCB4 = 1; } while(0)
+#define UART_TX_SetAnalogMode()      do { ANSELBbits.ANSELB4 = 1; } while(0)
+#define UART_TX_SetDigitalMode()     do { ANSELBbits.ANSELB4 = 0; } while(0)
 
 // get/set RB5 aliases
-#define IO_RB5_TRIS                 TRISBbits.TRISB5
-#define IO_RB5_LAT                  LATBbits.LATB5
-#define IO_RB5_PORT                 PORTBbits.RB5
-#define IO_RB5_WPU                  WPUBbits.WPUB5
-#define IO_RB5_OD                   ODCONBbits.ODCB5
-#define IO_RB5_ANS                  ANSELBbits.ANSELB5
-#define IO_RB5_SetHigh()            do { LATBbits.LATB5 = 1; } while(0)
-#define IO_RB5_SetLow()             do { LATBbits.LATB5 = 0; } while(0)
-#define IO_RB5_Toggle()             do { LATBbits.LATB5 = ~LATBbits.LATB5; } while(0)
-#define IO_RB5_GetValue()           PORTBbits.RB5
-#define IO_RB5_SetDigitalInput()    do { TRISBbits.TRISB5 = 1; } while(0)
-#define IO_RB5_SetDigitalOutput()   do { TRISBbits.TRISB5 = 0; } while(0)
-#define IO_RB5_SetPullup()          do { WPUBbits.WPUB5 = 1; } while(0)
-#define IO_RB5_ResetPullup()        do { WPUBbits.WPUB5 = 0; } while(0)
-#define IO_RB5_SetPushPull()        do { ODCONBbits.ODCB5 = 0; } while(0)
-#define IO_RB5_SetOpenDrain()       do { ODCONBbits.ODCB5 = 1; } while(0)
-#define IO_RB5_SetAnalogMode()      do { ANSELBbits.ANSELB5 = 1; } while(0)
-#define IO_RB5_SetDigitalMode()     do { ANSELBbits.ANSELB5 = 0; } while(0)
+#define UART_RX_TRIS                 TRISBbits.TRISB5
+#define UART_RX_LAT                  LATBbits.LATB5
+#define UART_RX_PORT                 PORTBbits.RB5
+#define UART_RX_WPU                  WPUBbits.WPUB5
+#define UART_RX_OD                   ODCONBbits.ODCB5
+#define UART_RX_ANS                  ANSELBbits.ANSELB5
+#define UART_RX_SetHigh()            do { LATBbits.LATB5 = 1; } while(0)
+#define UART_RX_SetLow()             do { LATBbits.LATB5 = 0; } while(0)
+#define UART_RX_Toggle()             do { LATBbits.LATB5 = ~LATBbits.LATB5; } while(0)
+#define UART_RX_GetValue()           PORTBbits.RB5
+#define UART_RX_SetDigitalInput()    do { TRISBbits.TRISB5 = 1; } while(0)
+#define UART_RX_SetDigitalOutput()   do { TRISBbits.TRISB5 = 0; } while(0)
+#define UART_RX_SetPullup()          do { WPUBbits.WPUB5 = 1; } while(0)
+#define UART_RX_ResetPullup()        do { WPUBbits.WPUB5 = 0; } while(0)
+#define UART_RX_SetPushPull()        do { ODCONBbits.ODCB5 = 0; } while(0)
+#define UART_RX_SetOpenDrain()       do { ODCONBbits.ODCB5 = 1; } while(0)
+#define UART_RX_SetAnalogMode()      do { ANSELBbits.ANSELB5 = 1; } while(0)
+#define UART_RX_SetDigitalMode()     do { ANSELBbits.ANSELB5 = 0; } while(0)
 
 /**
  * @ingroup  pinsdriver
@@ -144,6 +145,46 @@ void PIN_MANAGER_Initialize (void);
  * @return none
  */
 void PIN_MANAGER_IOC(void);
+
+/**
+ * @ingroup  pinsdriver
+ * @brief Interrupt on Change Handler for the CARD_DETECT pin functionality
+ * @param none
+ * @return none
+ */
+void CARD_DETECT_ISR(void);
+
+/**
+ * @ingroup  pinsdriver
+ * @brief Interrupt Handler Setter for CARD_DETECT pin interrupt-on-change functionality.
+ *        Allows selecting an interrupt handler for CARD_DETECT at application runtime
+ * @pre Pins intializer called
+ * @param InterruptHandler function pointer.
+ * @return none
+ */
+void CARD_DETECT_SetInterruptHandler(void (* InterruptHandler)(void));
+
+/**
+ * @ingroup  pinsdriver
+ * @brief Dynamic Interrupt Handler for CARD_DETECT pin.
+ *        This is a dynamic interrupt handler to be used together with the CARD_DETECT_SetInterruptHandler() method.
+ *        This handler is called every time the CARD_DETECT ISR is executed and allows any function to be registered at runtime.
+ * @pre Pins intializer called
+ * @param none
+ * @return none
+ */
+extern void (*CARD_DETECT_InterruptHandler)(void);
+
+/**
+ * @ingroup  pinsdriver
+ * @brief Default Interrupt Handler for CARD_DETECT pin. 
+ *        This is a predefined interrupt handler to be used together with the CARD_DETECT_SetInterruptHandler() method.
+ *        This handler is called every time the CARD_DETECT ISR is executed. 
+ * @pre Pins intializer called
+ * @param none
+ * @return none
+ */
+void CARD_DETECT_DefaultInterruptHandler(void);
 
 
 #endif // PINS_H

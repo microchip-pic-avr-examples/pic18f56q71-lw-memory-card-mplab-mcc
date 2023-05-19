@@ -55,6 +55,9 @@ extern "C" {
     //Transmits a 6 byte header, then returns the next byte after
     uint8_t SPI1_sendCommand_R1(uint8_t* data);
     
+    //Transmits a 6 byte header, then returns a 5 byte header
+    void SPI1_sendCommand_R7(uint8_t* txData, uint8_t* rxData);
+    
     //Sends 10 bytes (80 bits) worth of clock cycles for the memory card to boot
     void SPI1_sendResetSequence(void);
     

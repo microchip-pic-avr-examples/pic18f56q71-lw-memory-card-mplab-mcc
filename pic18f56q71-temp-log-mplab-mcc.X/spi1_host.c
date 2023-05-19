@@ -12,8 +12,9 @@ void SPI1_initHost(void)
     SPI1CON0 = 0x00;
     SPI1CON0bits.MST = 1;
     
-    //SS is Active Low
+    //Data shifted on falling edge, SS is Active Low
     SPI1CON1 = 0x00;
+    SPI1CON1bits.CKE = 1;
     SPI1CON1bits.SSP = 1;
     
     //Clear RXR, TXR, SS is active only when CNT > 0
@@ -206,83 +207,6 @@ void SPI1_receiveBytes(uint8_t* rxData, uint8_t len)
         rxData[rIndex] = SPI1RXB;
         rIndex++;
     }
-}
-
-//Transmits a 6 byte header, then returns the next byte after
-uint8_t SPI1_sendCommand_R1(uint8_t* data)
-{
-    //Clear data buffers
-    SPI1STATUSbits.CLRBF = 1;
-    
-    //Enable TX and RX
-    SPI1CON2bits.TXR = 1;
-    SPI1CON2bits.RXR = 1;
-    
-    //Clear status bit
-    SPI1INTFbits.TCZIF = 0;
-    
-    //Load Byte 0
-    SPI1TXB = data[0];
-    
-    //Set data length
-    SPI1TCNTL = 7;
-    
-    //Write / Read Index
-    uint8_t wIndex = 1, rIndex = 0;
-    
-    //Returned value
-    uint8_t rValue;
-    
-    //While counter is not zero
-    while (!SPI1INTFbits.TCZIF)
-    {
-        if ((PIR3bits.SPI1TXIF) && (wIndex < 6))
-        {
-            //TX Buffer has space, load next byte (until we hit the LEN)
-            SPI1TXB = data[wIndex];
-            wIndex++;
-        }
-        else if (wIndex == 6)
-        {
-            //1 Byte of Padding
-            SPI1TXB = 0xFF;
-        }
-        
-        if (PIR3bits.SPI1RXIF)
-        {
-            //RX Buffer Ready
-            if (rIndex == 6)
-            {
-                rValue = SPI1RXB;
-            }
-            else
-            {
-                //Throw out the value (invalid)
-                volatile uint8_t t = SPI1RXB;
-            }
-        
-            rIndex++;
-        }
-    }
-    
-    //Protects against a possible edge case where a byte is received as the module stops
-    if (PIR3bits.SPI1RXIF)
-    {
-        //RX Buffer Ready
-        if (rIndex == 6)
-        {
-            rValue = SPI1RXB;
-        }
-        else
-        {
-            //Throw out the value (invalid)
-            volatile uint8_t t = SPI1RXB;
-        }
-        
-        rIndex++;
-    }
-    
-    return rValue;
 }
 
 //Sends 10 bytes (80 bits) worth of clock cycles for the memory card to boot

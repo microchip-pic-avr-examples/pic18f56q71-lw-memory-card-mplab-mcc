@@ -35,9 +35,12 @@
 #include "memoryCard.h"
 #include "unitTests.h"
 
-/*
-    Main application
-*/
+#define UNIT_TEST_ENABLE
+
+void onCardInsert(void)
+{
+    
+}
 
 int main(void)
 {
@@ -47,20 +50,31 @@ int main(void)
     SPI1_initPins();
     SPI1_initHost();
 
+    CARD_DETECT_SetInterruptHandler(&onCardInsert);
+    
+    memCard_initDriver();
+    
     // Enable the Global High Interrupts 
     INTERRUPT_GlobalInterruptHighEnable(); 
 
     // Enable the Global Low Interrupts 
     INTERRUPT_GlobalInterruptLowEnable(); 
 
+    //Isolated unit tests for sub-systems
+#ifdef UNIT_TEST_ENABLE
     unitTest_runSequence();
+#endif
     
-    //Init the Card
-    memCard_reset();    
+    
+    
+    if (IS_CARD_ATTACHED())
+    {
+        //Card is plugged in
+        memCard_initCard();
+    }
     
     while(1)
     {
         
-        for (uint32_t i = 0; i < 0xFFFFFF; i++) { ; }
     }    
 }

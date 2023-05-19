@@ -1,12 +1,14 @@
 #include "memoryCard.h"
 #include "spi1_host.h"
-#include "mcc_generated_files/system/pins.h"
+#include "mcc_generated_files/system/system.h"
 
 #include <stdint.h>
 #include <stdbool.h>
 
+volatile bool isCardReady = false;
+
 //Init the Memory Card Driver
-void memCard_init(void)
+void memCard_initDriver(void)
 {
     
 }
@@ -15,17 +17,113 @@ void memCard_init(void)
 //Must be called whenever a card is inserted
 bool memCard_initCard(void)
 {
-    return false;
-}
-
-//Reset the memory card
-void memCard_reset(void)
-{
+    printf("Memory Card Detected\r\n");
+    
     //Reset the Card
     SPI1_sendResetSequence();
     
     //CMD0 - Reset
-    memCard_sendCommand_R1(0x00, 0x00);
+    CommandStatus status;
+    status.data = memCard_sendCommand_R1(0x00, 0x00);
+    //printf("Return Code: 0x%x\r\n", status.data);
+    
+    //CMD8
+    bool good = memCard_configureCard();
+    if (!good)
+    {
+        printf("CMD8 Failed to Configure Card\r\n");
+        return false;
+    }    
+    
+    //ACMD41
+    status.data = memCard_sendACommand_R1(41, 0x40000000);
+    
+    //CMD1
+    good = memCard_sendCommand_R1B(1, 0x40000000);
+    if (!good)
+    {
+        printf("CMD1 Failed to Configure Card\r\n");
+        return false;
+    }
+    
+    isCardReady = true;
+    printf("Memory Card Initialized\r\n");
+    return true;
+}
+
+//Calls CMD8 to configure the operating voltages
+bool memCard_configureCard(void)
+{
+    CARD_CS_SetLow();
+    uint8_t memPoolTx[6];
+    uint8_t memPoolRx[6];
+    
+    //Prepare Command Header
+    //0x40 - Fixed + CMD8
+    memPoolTx[0] = 0x40 | 8;
+    
+    //0b0001 - 2.7V to 3.6V operation
+    
+    //Load Data
+    memPoolTx[1] = 0x00;
+    memPoolTx[2] = 0x00;
+    memPoolTx[3] = VHS_3V3; 
+    memPoolTx[4] = CHECK_PATTERN; //Check Pattern
+    
+    //Add the CRC7 Value
+    memPoolTx[5] = memCard_runCRC7(&memPoolTx[0], 5);
+    
+    //Transmit header
+    SPI1_sendBytes(&memPoolTx[0], 6);
+    
+    bool done = false;
+    uint8_t count = 0;
+    CommandStatus stat;
+    
+    if (!memCard_receiveResponse_R1(&stat.data))
+    {
+        //Response Timeout
+        CARD_CS_SetHigh();
+        return false;
+    }
+    
+    if (stat.crc_error)
+    {
+        //Bad CRC - Exit
+        CARD_CS_SetHigh();
+        return false;
+    }
+    
+    //Now capture 4 more bytes
+    
+    memPoolTx[0] = 0xFF;
+    memPoolTx[1] = 0xFF;
+    memPoolTx[2] = 0xFF;
+    memPoolTx[3] = 0xFF;
+    
+    //Get the last bytes of the header
+    SPI1_exchangeBytes(&memPoolTx[0], &memPoolRx[0], 4);
+    CARD_CS_SetHigh();
+    
+    //First verify the R1 header
+    if (stat.data != 0x01)
+    {
+        return false;
+    }
+    
+    //Next, verify VHS
+    if ((memPoolRx[2] & 0x0F) != VHS_3V3)
+    {
+        return false;
+    }
+    
+    //Finally, match check pattern
+    if (memPoolRx[3] != CHECK_PATTERN)
+    {
+        return false;
+    }
+    
+    return true;
 }
 
 //Send a command to the memory card
@@ -48,9 +146,99 @@ uint8_t memCard_sendCommand_R1(uint8_t commandIndex, uint32_t data)
     //Add the CRC7 Value
     memPool[5] = memCard_runCRC7(&memPool[0], 5);
     
-    uint8_t rVal = SPI1_sendCommand_R1(memPool);
+    //First transmit the sequence
+    SPI1_sendBytes(&memPool[0], 6);
+    
+    uint8_t rVal = 0xFF;
+    
+    memCard_receiveResponse_R1(&rVal);
+    
     CARD_CS_SetHigh();
     return rVal;
+}
+
+//Send a command to the memory card
+//Command must be in R1B Response Format
+uint8_t memCard_sendCommand_R1B(uint8_t commandIndex, uint32_t data)
+{
+    CARD_CS_SetLow();
+    uint8_t memPool[6];
+    
+    //Prepare Command Header
+    memPool[0] = 0x40; 
+    memPool[0] |= commandIndex;
+    
+    //Load Data
+    memPool[1] = (data & 0xFF000000) >> 24;
+    memPool[2] = (data & 0x00FF0000) >> 16;
+    memPool[3] = (data & 0x0000FF00) >> 8;
+    memPool[4] = (data & 0x000000FF);
+    
+    //Add the CRC7 Value
+    memPool[5] = memCard_runCRC7(&memPool[0], 5);
+    
+    //First transmit the sequence
+    SPI1_sendBytes(&memPool[0], 6);
+    
+    uint8_t rVal = 0xFF;
+    
+    memCard_receiveResponse_R1(&rVal);
+    
+    //TODO: Add Timeout
+    
+    //Wait for PORTC to go high
+    while (!PORTCbits.RC5)
+    {
+        
+    }
+    
+    CARD_CS_SetHigh();
+    return rVal;
+}
+
+//Send an ACOMMAND to the memory card
+uint8_t memCard_sendACommand_R1(uint8_t commandIndex, uint32_t data)
+{
+    CommandStatus rVal;
+    rVal.data = memCard_sendCommand_R1(55, 0x00);
+    
+    if (rVal.is_idle)
+    {
+        
+    }
+    
+    rVal.data = memCard_sendCommand_R1(commandIndex, data);
+    
+    return rVal.data;
+}
+
+//Returns an R1 type response
+bool memCard_receiveResponse_R1(uint8_t* dst)
+{
+    bool done = false;
+    uint8_t count = 0;
+    CommandStatus stat;
+    
+    *dst = 0xFF;
+    
+    while (!done)
+    {
+        stat.data = SPI1_exchangeByte(0xFF);
+        count++;
+        if (!stat.valid_header_n)
+        {
+            //Valid header
+            done = true;
+        }
+        else if (count == TIMEOUT_BYTES)
+        {
+            return false;
+        }
+    }
+    
+    //Load data
+    *dst = stat.data;
+    return true;
 }
 
 //Compute CRC7 for the memory card commands
