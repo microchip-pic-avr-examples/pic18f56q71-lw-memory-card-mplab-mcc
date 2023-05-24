@@ -23,8 +23,8 @@ void SPI1_initHost(void)
     //Select HFINTOSC as Clock Source
     SPI1CLK = 0b00001;
     
-    //From a 64MHz clock, 1 MHz SCK
-    SPI1BAUD = 31;
+    //From a 64MHz clock, 400 kHz SCK
+    SPI1BAUD = 79;
     
     //Set Width to 8-bits (n = 0)
     SPI1TWIDTH = 0;
@@ -62,6 +62,14 @@ void SPI1_initPins(void)
     TRISA5 = 0;
     RA5PPS = 0x1F;
 #endif
+}
+
+//Sets the clock speed of SPI1    
+void SPI1_setSpeed(uint8_t baud)
+{
+    SPI1CON0bits.EN = 0;
+    SPI1BAUD = baud;
+    SPI1CON0bits.EN = 1;
 }
 
 //Sends and receives a single byte

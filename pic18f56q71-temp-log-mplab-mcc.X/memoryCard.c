@@ -19,32 +19,80 @@ bool memCard_initCard(void)
 {
     printf("Memory Card Detected\r\n");
     
+    //Move to 400 kHz baud to start
+    SPI1_setSpeed(SPI_400KHZ_BAUD);
+    
     //Reset the Card
     SPI1_sendResetSequence();
     
     //CMD0 - Reset
     CommandStatus status;
-    status.data = memCard_sendCommand_R1(0x00, 0x00);
+    status.data = memCard_sendCMD_R1(0x00, CARD_NO_DATA);
     //printf("Return Code: 0x%x\r\n", status.data);
     
     //CMD8
-    bool good = memCard_configureCard();
-    if (!good)
+    CommandError err = memCard_configureCard();
+    if (err != CARD_NO_ERROR)
     {
         printf("CMD8 Failed to Configure Card\r\n");
         return false;
     }    
     
-    //ACMD41
-    status.data = memCard_sendACommand_R1(41, 0x40000000);
+    uint8_t count = 1;
     
-    //CMD1
-    good = memCard_sendCommand_R1B(1, 0x40000000);
-    if (!good)
+    //Try to run ACMD41
+    status.data = memCard_sendACMD_R1(41, 0x40000000);
+    
+    //Check to see if ACMD41 is accepted
+    if (status.illegal_cmd_error)
     {
-        printf("CMD1 Failed to Configure Card\r\n");
-        return false;
+        //Illegal Command, switch to CMD1
+        while (status.is_idle)
+        {
+            //CMD1
+            status.data = memCard_sendCMD_R1(1, CARD_NO_DATA);
+            
+            if (count >= INIT_RETRIES)
+            {
+                printf("CMD1 failed to init card.\r\n");
+                return false;
+            }
+            else
+            {
+                count++;
+            }
+        }
     }
+    else
+    {
+        //Valid Command
+        while (status.is_idle)
+        {
+            //ACMD41
+            //0x77 - First Packet
+            //0x69 - Second Packet
+            status.data = memCard_sendACMD_R1(41, 0x40000000);
+            
+            if (count >= INIT_RETRIES)
+            {
+                printf("ACMD41 failed to init card.\r\n");
+                return false;
+            }
+            else
+            {
+                count++;
+            }
+        }
+        
+    }
+    
+    //Check for High Capacity Support
+    //CMD58
+    
+    
+    //Set Block Size to 512B
+    //CMD16
+    
     
     isCardReady = true;
     printf("Memory Card Initialized\r\n");
@@ -52,9 +100,11 @@ bool memCard_initCard(void)
 }
 
 //Calls CMD8 to configure the operating voltages
-bool memCard_configureCard(void)
+CommandError memCard_configureCard(void)
 {
-    CARD_CS_SetLow();
+    //Send an extra byte to help the controller between commands
+    SPI1_sendByte(0xFF);
+    
     uint8_t memPoolTx[6];
     uint8_t memPoolRx[6];
     
@@ -73,25 +123,32 @@ bool memCard_configureCard(void)
     //Add the CRC7 Value
     memPoolTx[5] = memCard_runCRC7(&memPoolTx[0], 5);
     
+    CARD_CS_SetLow();
+    
     //Transmit header
     SPI1_sendBytes(&memPoolTx[0], 6);
     
-    bool done = false;
-    uint8_t count = 0;
     CommandStatus stat;
     
     if (!memCard_receiveResponse_R1(&stat.data))
     {
         //Response Timeout
         CARD_CS_SetHigh();
-        return false;
+        return CARD_SPI_TIMEOUT;
+    }
+    
+    if (stat.illegal_cmd_error)
+    {
+        //Illegal Command
+        CARD_CS_SetHigh();
+        return CARD_ILLEGAL_CMD;
     }
     
     if (stat.crc_error)
     {
         //Bad CRC - Exit
         CARD_CS_SetHigh();
-        return false;
+        return CARD_RESPONSE_ERROR;
     }
     
     //Now capture 4 more bytes
@@ -106,31 +163,33 @@ bool memCard_configureCard(void)
     CARD_CS_SetHigh();
     
     //First verify the R1 header
-    if (stat.data != 0x01)
+    if (stat.data != HEADER_GOOD)
     {
-        return false;
+        return CARD_RESPONSE_ERROR;
     }
     
     //Next, verify VHS
     if ((memPoolRx[2] & 0x0F) != VHS_3V3)
     {
-        return false;
+        return CARD_VOLTAGE_NOT_SUPPORTED;
     }
     
     //Finally, match check pattern
     if (memPoolRx[3] != CHECK_PATTERN)
     {
-        return false;
+        return CARD_RESPONSE_ERROR;
     }
     
-    return true;
+    return CARD_NO_ERROR;
 }
 
 //Send a command to the memory card
 //Command must be in R1 Response Format
-uint8_t memCard_sendCommand_R1(uint8_t commandIndex, uint32_t data)
+uint8_t memCard_sendCMD_R1(uint8_t commandIndex, uint32_t data)
 {
-    CARD_CS_SetLow();
+    //Send an extra byte to help the controller between commands
+    SPI1_sendByte(0xFF);
+    
     uint8_t memPool[6];
     
     //Prepare Command Header
@@ -145,6 +204,8 @@ uint8_t memCard_sendCommand_R1(uint8_t commandIndex, uint32_t data)
     
     //Add the CRC7 Value
     memPool[5] = memCard_runCRC7(&memPool[0], 5);
+    
+    CARD_CS_SetLow();
     
     //First transmit the sequence
     SPI1_sendBytes(&memPool[0], 6);
@@ -159,9 +220,11 @@ uint8_t memCard_sendCommand_R1(uint8_t commandIndex, uint32_t data)
 
 //Send a command to the memory card
 //Command must be in R1B Response Format
-uint8_t memCard_sendCommand_R1B(uint8_t commandIndex, uint32_t data)
+uint8_t memCard_sendCMD_R1B(uint8_t commandIndex, uint32_t data)
 {
-    CARD_CS_SetLow();
+    //Send an extra byte to help the controller between commands
+    SPI1_sendByte(0xFF);
+    
     uint8_t memPool[6];
     
     //Prepare Command Header
@@ -177,39 +240,104 @@ uint8_t memCard_sendCommand_R1B(uint8_t commandIndex, uint32_t data)
     //Add the CRC7 Value
     memPool[5] = memCard_runCRC7(&memPool[0], 5);
     
+    CARD_CS_SetLow();
+    
     //First transmit the sequence
     SPI1_sendBytes(&memPool[0], 6);
     
     uint8_t rVal = 0xFF;
-    
+   
+    //Receive Response
     memCard_receiveResponse_R1(&rVal);
-    
-    //TODO: Add Timeout
-    
-    //Wait for PORTC to go high
+
+    //For busy signal...
     while (!PORTCbits.RC5)
     {
         
     }
     
     CARD_CS_SetHigh();
+    
     return rVal;
 }
 
 //Send an ACOMMAND to the memory card
-uint8_t memCard_sendACommand_R1(uint8_t commandIndex, uint32_t data)
+uint8_t memCard_sendACMD_R1(uint8_t commandIndex, uint32_t data)
 {
     CommandStatus rVal;
-    rVal.data = memCard_sendCommand_R1(55, 0x00);
+    rVal.data = memCard_sendCMD_R1(55, 0x00);
     
-    if (rVal.is_idle)
+    if (rVal.data != HEADER_GOOD)
     {
-        
+        return HEADER_INVALID;
     }
     
-    rVal.data = memCard_sendCommand_R1(commandIndex, data);
+    rVal.data = memCard_sendCMD_R1(commandIndex, data);
     
     return rVal.data;
+}
+
+//Returns the OCR register from the memory card
+uint32_t memCard_getOCR(void)
+{
+    uint32_t rData = CARD_BAD_OCR;
+    
+    //Send an extra byte to help the controller between commands
+    SPI1_sendByte(0xFF);
+    
+    uint8_t memPoolTx[6];
+    uint8_t memPoolRx[6];
+    
+    //Prepare Command Header
+    //0x40 - Fixed + CMD58
+    memPoolTx[0] = 0x40 | 8;
+    
+    //No data!
+    memPoolTx[1] = 0x00;
+    memPoolTx[2] = 0x00;
+    memPoolTx[3] = 0x00; 
+    memPoolTx[4] = 0x00;
+    
+    //Compute the CRC7 Value
+    memPoolTx[5] = memCard_runCRC7(&memPoolTx[0], 5);
+    
+    CARD_CS_SetLow();
+    
+    //Transmit header
+    SPI1_sendBytes(&memPoolTx[0], 6);
+    
+    CommandStatus stat;
+    
+    if (!memCard_receiveResponse_R1(&stat.data))
+    {
+        //Response Timeout
+        CARD_CS_SetHigh();
+        return CARD_BAD_OCR;
+    }
+    
+    if (stat.data != HEADER_GOOD)
+    {
+        //Something went wrong
+        CARD_CS_SetHigh();
+        return CARD_BAD_OCR;
+    }
+
+    //Now capture 4 more bytes
+    
+    memPoolTx[0] = 0xFF;
+    memPoolTx[1] = 0xFF;
+    memPoolTx[2] = 0xFF;
+    memPoolTx[3] = 0xFF;
+    
+    //Get the last bytes of the header
+    SPI1_exchangeBytes(&memPoolTx[0], &memPoolRx[0], 4);
+    CARD_CS_SetHigh();
+
+    //Build 32-bit value
+    rData = ((uint32_t) memPoolTx << 24) | ((uint32_t) memPoolTx[1] << 16) | 
+            ((uint32_t) memPoolTx[2] << 8) | (uint32_t) memPoolTx[3]; 
+        
+    return rData;
 }
 
 //Returns an R1 type response
@@ -219,7 +347,7 @@ bool memCard_receiveResponse_R1(uint8_t* dst)
     uint8_t count = 0;
     CommandStatus stat;
     
-    *dst = 0xFF;
+    *dst = HEADER_INVALID;
     
     while (!done)
     {

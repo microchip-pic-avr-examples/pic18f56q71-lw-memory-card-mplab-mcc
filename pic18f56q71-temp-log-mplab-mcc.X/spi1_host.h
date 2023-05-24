@@ -27,12 +27,16 @@ extern "C" {
     
 #include <stdint.h>
     
-    //Initializes a SPI Host
+    //Initializes a SPI Host at 400 kHz
     //I/O must be initialized separately
     void SPI1_initHost(void);
     
     //Initializes the I/O for the SPI Host
     void SPI1_initPins(void);
+    
+    //Sets the clock speed of SPI1
+    //F_SPI = Fclk / (2 * (BAUD + 1))
+    void SPI1_setSpeed(uint8_t baud);
     
     //Sends and receives a single byte
     uint8_t SPI1_exchangeByte(uint8_t data);
