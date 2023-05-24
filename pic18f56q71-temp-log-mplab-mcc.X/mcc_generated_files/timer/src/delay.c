@@ -1,15 +1,14 @@
- /*
- * MAIN Generated Driver File
+/**
+ * DELAY Generated Driver File
  * 
- * @file main.c
+ * @file delay.c
  * 
- * @defgroup main MAIN
+ * @ingroup delay
  * 
- * @brief This is the generated driver implementation file for the MAIN driver.
+ * @brief This file contains the functions to generate delays in the millisecond and microsecond ranges as well as using timer ticks to indicate delay length.
  *
- * @version MAIN Driver Version 1.0.0
+ * @version DELAY Driver Version 1.1.0
 */
-
 /*
 © [2023] Microchip Technology Inc. and its subsidiaries.
 
@@ -30,56 +29,26 @@
     EXCEED AMOUNT OF FEES, IF ANY, YOU PAID DIRECTLY TO MICROCHIP FOR 
     THIS SOFTWARE.
 */
-#include "mcc_generated_files/system/system.h"
-#include "spi1_host.h"
-#include "memoryCard.h"
-#include "unitTests.h"
 
-//#define UNIT_TEST_ENABLE
+#include "../../system/config_bits.h"
+#include <xc.h>
+#include <stdint.h>
 
-void onCardChange(void)
-{
-    if (IS_CARD_ATTACHED())
-    {
-        memCard_attach();
-    }
-    else
-    {
-        memCard_detach();
+void DELAY_milliseconds(uint16_t milliseconds) {
+    while(milliseconds--){ 
+        __delay_ms(1); 
     }
 }
 
-int main(void)
-{
-    SYSTEM_Initialize();
-    
-    //Init SPI
-    SPI1_initPins();
-    SPI1_initHost();
-
-    //Interrupt for card insert/remove
-    CLC2_CLCI_SetInterruptHandler(&onCardChange);
-    
-    //Initialize Memory Card
-    memCard_initDriver();
-    
-    // Enable the Global High Interrupts 
-    INTERRUPT_GlobalInterruptHighEnable(); 
-
-    // Enable the Global Low Interrupts 
-    INTERRUPT_GlobalInterruptLowEnable(); 
-
-    //Isolated unit tests for sub-systems
-#ifdef UNIT_TEST_ENABLE
-    unitTest_runSequence();
-#endif
-    
-    while(1)
+void DELAY_microseconds(uint16_t microseconds) {
+    while( microseconds >= 32)
     {
-        if (memCard_getCardStatus() == STATUS_CARD_NOT_INIT)
-        {
-            //Card is plugged in
-            memCard_initCard();
-        }
-    }    
+        __delay_us(32);
+        microseconds -= 32;
+    }
+    
+    while(microseconds--)
+    {
+        __delay_us(1);
+    }
 }

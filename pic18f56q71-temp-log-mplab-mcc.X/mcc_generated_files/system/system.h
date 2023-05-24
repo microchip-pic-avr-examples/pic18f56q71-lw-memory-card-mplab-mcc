@@ -39,7 +39,10 @@
 #include "config_bits.h"
 #include "../system/clock.h"
 #include "../system/pins.h"
+#include "../clc/clc1.h"
+#include "../clc/clc2.h"
 #include "../crc/crc.h"
+#include "../timer/tmr2.h"
 #include "../uart/uart2.h"
 #include "../system/interrupt.h"
 

@@ -1,13 +1,13 @@
 /**
- * System Driver Source File
+ * CLC1 Generated Driver API Header File.
  * 
- * @file system.c
+ * @file clc1.h
  * 
- * @ingroup systemdriver
+ * @defgroup  clc1 CLC1
  * 
- * @brief This file contains the API implementation for the System driver.
+ * @brief This file contains the API prototypes for the CLC1 driver.
  *
- * @version Driver Version 1.0.1
+ * @version CLC1 Driver Version 1.0.1
 */
 /*
 © [2023] Microchip Technology Inc. and its subsidiaries.
@@ -30,18 +30,34 @@
     THIS SOFTWARE.
 */
 
-#include "../system.h"
+#ifndef CLC1_H
+ #define CLC1_H
+
+#include <xc.h>
+#include <stdint.h>
+#include <stdbool.h>
+
+/**
+ * @ingroup clc1
+ * @brief  Initializes the CLC1. This routine configures the CLC1 specific control registers.
+ * @param None.
+ * @return None.
+ * 
+ */
+void CLC1_Initialize(void);
 
 
-void SYSTEM_Initialize(void)
-{
-    CLOCK_Initialize();
-    PIN_MANAGER_Initialize();
-    CLC1_Initialize();
-    CLC2_Initialize();
-    CRC_Initialize();
-    Timer2_Initialize();
-    UART2_Initialize();
-    INTERRUPT_Initialize();
-}
+/**
+ * @ingroup clc1
+ * @brief Returns the output pin status of the CLC module.
+ * @param  None.
+ * @retval True - Output is 1.
+ * @retval False - Output is 0.
+ */
+bool CLC1_OutputStatusGet(void);
+
+#endif  // CLC1_H
+/**
+ End of File
+*/
 

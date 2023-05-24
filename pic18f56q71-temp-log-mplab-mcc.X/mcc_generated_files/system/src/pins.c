@@ -34,7 +34,6 @@
 
 #include "../pins.h"
 
-void (*CARD_DETECT_InterruptHandler)(void);
 
 void PIN_MANAGER_Initialize(void)
 {
@@ -119,13 +118,14 @@ void PIN_MANAGER_Initialize(void)
     PPS registers
     */
     U2RXPPS = 0xD; //RB5->UART2:RX2;
+    CLCIN0PPS = 0x1; //RA1->CLC1:CLCIN0;
     RB4PPS = 0x18;  //RB4->UART2:TX2;
 
    /**
     IOCx registers 
     */
     IOCAP = 0x0;
-    IOCAN = 0x2;
+    IOCAN = 0x0;
     IOCAF = 0x0;
     IOCWP = 0x0;
     IOCWN = 0x0;
@@ -140,49 +140,11 @@ void PIN_MANAGER_Initialize(void)
     IOCEN = 0x0;
     IOCEF = 0x0;
 
-    CARD_DETECT_SetInterruptHandler(CARD_DETECT_DefaultInterruptHandler);
 
-    // Enable PIE0bits.IOCIE interrupt 
-    PIE0bits.IOCIE = 1; 
 }
   
 void PIN_MANAGER_IOC(void)
 {
-    // interrupt on change for pin CARD_DETECT
-    if(IOCAFbits.IOCAF1 == 1)
-    {
-        CARD_DETECT_ISR();  
-    }
-}
-   
-/**
-   CARD_DETECT Interrupt Service Routine
-*/
-void CARD_DETECT_ISR(void) {
-
-    // Add custom CARD_DETECT code
-
-    // Call the interrupt handler for the callback registered at runtime
-    if(CARD_DETECT_InterruptHandler)
-    {
-        CARD_DETECT_InterruptHandler();
-    }
-    IOCAFbits.IOCAF1 = 0;
-}
-
-/**
-  Allows selecting an interrupt handler for CARD_DETECT at application runtime
-*/
-void CARD_DETECT_SetInterruptHandler(void (* InterruptHandler)(void)){
-    CARD_DETECT_InterruptHandler = InterruptHandler;
-}
-
-/**
-  Default interrupt handler for CARD_DETECT
-*/
-void CARD_DETECT_DefaultInterruptHandler(void){
-    // add your CARD_DETECT interrupt custom code
-    // or set custom function using CARD_DETECT_SetInterruptHandler()
 }
 /**
  End of File

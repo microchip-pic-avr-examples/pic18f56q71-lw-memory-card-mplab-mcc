@@ -9,15 +9,16 @@ extern "C" {
 #include <stdbool.h>
 
 #include "mcc_generated_files/system/pins.h"
+#include "mcc_generated_files/clc/clc2.h"
 
 //Macro for card insert / detect
-#define IS_CARD_ATTACHED() (!CARD_DETECT_GetValue())
+#define IS_CARD_ATTACHED() (!CLC2_OutputStatusGet())
     
 //Number of bytes to wait for valid response (for R1 commands)
 #define TIMEOUT_BYTES 10
     
 //How many times will the driver attempt to init the Card (ACMD41 / CMD1)
-#define INIT_RETRIES 10
+#define INIT_RETRIES 100
     
 //Check Pattern during configuration (Can be any value)
 #define CHECK_PATTERN 0xA5
@@ -26,7 +27,10 @@ extern "C" {
 #define VHS_3V3 0b0001
     
 //This is returned if no header errors occurred
-#define HEADER_GOOD 0x01
+#define HEADER_IDLE 0x01
+    
+//This is returned if no errors occurred AFTER init.
+#define HEADER_NO_ERROR 0x00
     
 //This is returned for an invalid header
 #define HEADER_INVALID 0xFF
@@ -38,6 +42,9 @@ extern "C" {
 //Bad OCR return value
 #define CARD_BAD_OCR 0xFFFFFFFF
 #define CARD_NO_DATA 0x00000000
+    
+//Number of bytes to transfer
+#define FAT_BLOCK_SIZE 512
     
     typedef union 
     {
@@ -83,11 +90,32 @@ extern "C" {
         CARD_NO_ERROR = 0, CARD_SPI_TIMEOUT, CARD_RESPONSE_ERROR, CARD_ILLEGAL_CMD, CARD_VOLTAGE_NOT_SUPPORTED
     } CommandError;
     
+    typedef enum {
+        CCS_INVALID = -1, CCS_LOW_CAPACITY, CCS_HIGH_CAPACITY
+    } CardCapacityType;
+    
+    typedef enum {
+        STATUS_CARD_NONE = 0, STATUS_CARD_NOT_INIT, STATUS_CARD_ERROR, STATUS_CARD_READY
+    } MemoryCardDriverStatus;
+    
     //Init the Memory Card Driver
     void memCard_initDriver(void);
     
     //Init an inserted Memory Card
     bool memCard_initCard(void);
+    
+    //Returns the status of the memory card
+    MemoryCardDriverStatus memCard_getCardStatus(void);
+    
+    //Returns true if the card is ready
+    bool memCard_isCardReady(void);
+    
+    //Notifies the driver that a card is now attached
+    //DOES NOT INITIALIZE THE CARD
+    void memCard_attach(void);
+    
+    //Notifies the driver that the card is not attached
+    void memCard_detach(void);
     
     //Calls CMD8 to configure the operating voltages
     CommandError memCard_configureCard(void);
@@ -98,8 +126,8 @@ extern "C" {
     //Send an ACOMMAND to the memory card and processes an R1 response
     uint8_t memCard_sendACMD_R1(uint8_t commandIndex, uint32_t data);
     
-    //Returns the OCR register from the memory card
-    uint32_t memCard_getOCR(void);
+    //Returns whether the card is high capacity
+    CardCapacityType memCard_getCapacityType(void);
     
     //Returns an R1 type response
     bool memCard_receiveResponse_R1(uint8_t* dst);

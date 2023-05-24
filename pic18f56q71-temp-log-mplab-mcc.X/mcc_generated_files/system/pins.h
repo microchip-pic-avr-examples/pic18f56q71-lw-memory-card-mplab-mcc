@@ -68,7 +68,6 @@
 #define CARD_DETECT_SetOpenDrain()       do { ODCONAbits.ODCA1 = 1; } while(0)
 #define CARD_DETECT_SetAnalogMode()      do { ANSELAbits.ANSELA1 = 1; } while(0)
 #define CARD_DETECT_SetDigitalMode()     do { ANSELAbits.ANSELA1 = 0; } while(0)
-#define RA1_SetInterruptHandler  CARD_DETECT_SetInterruptHandler
 
 // get/set RA5 aliases
 #define CARD_CS_TRIS                 TRISAbits.TRISA5
@@ -145,46 +144,6 @@ void PIN_MANAGER_Initialize (void);
  * @return none
  */
 void PIN_MANAGER_IOC(void);
-
-/**
- * @ingroup  pinsdriver
- * @brief Interrupt on Change Handler for the CARD_DETECT pin functionality
- * @param none
- * @return none
- */
-void CARD_DETECT_ISR(void);
-
-/**
- * @ingroup  pinsdriver
- * @brief Interrupt Handler Setter for CARD_DETECT pin interrupt-on-change functionality.
- *        Allows selecting an interrupt handler for CARD_DETECT at application runtime
- * @pre Pins intializer called
- * @param InterruptHandler function pointer.
- * @return none
- */
-void CARD_DETECT_SetInterruptHandler(void (* InterruptHandler)(void));
-
-/**
- * @ingroup  pinsdriver
- * @brief Dynamic Interrupt Handler for CARD_DETECT pin.
- *        This is a dynamic interrupt handler to be used together with the CARD_DETECT_SetInterruptHandler() method.
- *        This handler is called every time the CARD_DETECT ISR is executed and allows any function to be registered at runtime.
- * @pre Pins intializer called
- * @param none
- * @return none
- */
-extern void (*CARD_DETECT_InterruptHandler)(void);
-
-/**
- * @ingroup  pinsdriver
- * @brief Default Interrupt Handler for CARD_DETECT pin. 
- *        This is a predefined interrupt handler to be used together with the CARD_DETECT_SetInterruptHandler() method.
- *        This handler is called every time the CARD_DETECT ISR is executed. 
- * @pre Pins intializer called
- * @param none
- * @return none
- */
-void CARD_DETECT_DefaultInterruptHandler(void);
 
 
 #endif // PINS_H
