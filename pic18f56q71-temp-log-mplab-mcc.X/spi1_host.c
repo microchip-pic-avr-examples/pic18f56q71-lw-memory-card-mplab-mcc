@@ -217,6 +217,54 @@ void SPI1_receiveBytes(uint8_t* rxData, uint8_t len)
     }
 }
 
+//Receives LEN bytes, and transmits 0xFF
+void SPI1_receiveBytesTransmitFF(uint8_t* rxData, uint8_t len)
+{
+    //Clear data buffers
+    SPI1STATUSbits.CLRBF = 1;
+    
+    //Enable RX and TX
+    SPI1CON2bits.TXR = 1;
+    SPI1CON2bits.RXR = 1;
+    
+    //Clear status bit
+    SPI1INTFbits.TCZIF = 0;
+    
+    //Set data length
+    SPI1TCNTL = len;
+    
+    //Write / Read Index
+    uint8_t rIndex = 0;
+    uint8_t wCount = 0;
+    
+    //While counter is not zero
+    while (!SPI1INTFbits.TCZIF)
+    {
+        if ((PIR3bits.SPI1TXIF) && (wCount < len))
+        {
+            //TX Buffer has space, load next byte
+            SPI1TXB = 0xFF;
+            wCount++;
+        }
+        
+        //Protects against a possible edge case where a byte is received as the module stops
+        if (PIR3bits.SPI1RXIF)
+        {
+            //RX Buffer Ready
+            rxData[rIndex] = SPI1RXB;
+            rIndex++;
+        }
+    }
+    
+    //Protects against a possible edge case where a byte is received as the module stops
+    if (PIR3bits.SPI1RXIF)
+    {
+        //RX Buffer Ready
+        rxData[rIndex] = SPI1RXB;
+        rIndex++;
+    }
+}
+
 //Sends 10 bytes (80 bits) worth of clock cycles for the memory card to boot
 void SPI1_sendResetSequence(void)
 {

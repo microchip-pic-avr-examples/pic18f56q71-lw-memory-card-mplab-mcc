@@ -18,13 +18,16 @@ extern "C" {
 #define IS_CARD_ATTACHED() (!CLC2_OutputStatusGet())
     
 //Number of bytes to wait for valid response (for R1 commands)
-#define TIMEOUT_BYTES 10
+#define R1_TIMEOUT_BYTES 10
+    
+//Number of bytes to wait for data response
+#define READ_TIMEOUT_BYTES 10
     
 //How many times will the driver attempt to init the Card (ACMD41 / CMD1)
 #define INIT_RETRIES 100
     
 //If any stage of init fails, the driver will retry this many times before giving up
-#define FULL_RETRIES 3
+#define FULL_RETRIES 5
     
 //Check Pattern during configuration (Can be any value)
 #define CHECK_PATTERN 0xA5
@@ -117,6 +120,9 @@ extern "C" {
     //Returns true if the card is ready
     bool memCard_isCardReady(void);
     
+    //Requests max clock speed info from card, and sets SPI frequency
+    bool memCard_setupFastSPI(void);
+    
     //Notifies the driver that a card is now attached
     //DOES NOT INITIALIZE THE CARD
     void memCard_attach(void);
@@ -138,6 +144,12 @@ extern "C" {
     
     //Returns an R1 type response
     bool memCard_receiveResponse_R1(uint8_t* dst);
+    
+    //Reads the 16-byte CSD Register
+    CommandError memCard_readCSD(uint8_t* data);
+    
+    //Reads a block of data at address
+    CommandError memCard_readBlock(uint8_t* data, uint32_t blockAddr);
     
     //Compute CRC7 for the memory card commands
     uint8_t memCard_runCRC7(uint8_t* dataIn, uint8_t len);

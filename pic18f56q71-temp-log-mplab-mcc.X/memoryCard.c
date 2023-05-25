@@ -170,6 +170,12 @@ bool memCard_initCard(void)
                 printf("[WARN] Unable to set BLOCK SIZE\r\n");
             }
         }
+        
+        //Set SPI Frequency
+        if (memCard_setupFastSPI())
+        {
+            printf("[WARN] Unable to change SPI clock speeds\r\n");
+        }
 
         cardStatus = STATUS_CARD_READY;
         printf("Memory card - READY\r\n");
@@ -191,6 +197,20 @@ MemoryCardDriverStatus memCard_getCardStatus(void)
 bool memCard_isCardReady(void)
 {
     return (cardStatus == STATUS_CARD_READY);
+}
+
+//Requests max clock speed info from card, and sets SPI frequency
+bool memCard_setupFastSPI(void)
+{
+    uint8_t resp[16];
+    
+    //Read the CSD register
+    if (!memCard_readCSD(&resp[0]))
+    {
+        return false;
+    }
+    
+    return false;
 }
 
 //Notifies the driver that a card is now attached
@@ -427,7 +447,7 @@ bool memCard_receiveResponse_R1(uint8_t* dst)
             //Valid header
             done = true;
         }
-        else if (count == TIMEOUT_BYTES)
+        else if (count == R1_TIMEOUT_BYTES)
         {
             return false;
         }
@@ -436,6 +456,79 @@ bool memCard_receiveResponse_R1(uint8_t* dst)
     //Load data
     *dst = stat.data;
     return true;
+}
+
+//Reads the 16-byte CSD Register
+CommandError memCard_readCSD(uint8_t* data)
+{
+    //Send CSD read command
+    //CMD9
+    
+    uint8_t txData[6];
+    uint8_t header;
+    
+    //Command Header
+    txData[0] = 0x40 | 9;
+    
+    //No arguments
+    txData[1] = 0x00;
+    txData[2] = 0x00;
+    txData[3] = 0x00;
+    txData[4] = 0x00;
+    
+    //Calculate checksum
+    txData[5] = memCard_runCRC7(&txData[0], 5);
+    
+    CARD_CS_SetLow();
+    
+    //Send Command
+    SPI1_sendBytes(&txData[0], 6);
+    
+    if (!memCard_receiveResponse_R1(&header))
+    {
+        CARD_CS_SetHigh();
+        return CARD_SPI_TIMEOUT;
+    }
+    
+    if (header != HEADER_NO_ERROR)
+    {
+        //Something went wrong
+        CARD_CS_SetHigh();
+        return CARD_RESPONSE_ERROR;
+    }
+    
+    //Data Header
+    uint8_t count = 0;
+    data[0] = 0xFF;
+    while ((count < READ_TIMEOUT_BYTES) && (data[0] == 0xFF))
+    {
+        data[0] = SPI1_exchangeByte(0xFF);
+        count++;
+    }
+    
+    //Now, receive 16 byte packet
+    SPI1_receiveBytesTransmitFF(&data[1], 16);
+    
+    uint8_t crcResp[2];
+    
+    //Finally, get 2 bytes for checksum
+    SPI1_receiveBytesTransmitFF(&crcResp[0], 2);
+    
+    CARD_CS_SetHigh();
+    
+    
+    //CRC16 CCIT Polynomial
+    //0x1021
+    
+    //TODO: Verify the Checksum
+    
+    return CARD_SPI_TIMEOUT;
+}
+
+//Reads a block of data
+CommandError memCard_readBlock(uint8_t* data, uint32_t blockAddr)
+{
+    return CARD_SPI_TIMEOUT;
 }
 
 //Compute CRC7 for the memory card commands
