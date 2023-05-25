@@ -55,6 +55,9 @@ extern "C" {
 //Number of bytes to transfer
 #define FAT_BLOCK_SIZE 512
     
+//Block to Byte Shift for FAT file systems
+#define FAT_BLOCK_SHIFT 9
+    
     typedef union 
     {
         struct {
@@ -150,6 +153,9 @@ extern "C" {
     
     //Reads a block of data at address
     CommandError memCard_readBlock(uint8_t* data, uint32_t blockAddr);
+    
+    //Receives length bytes of data. Does not transmit the command
+    CommandError memCard_receiveBlockData(uint8_t* data, uint16_t length);
     
     //Compute CRC7 for the memory card commands
     uint8_t memCard_runCRC7(uint8_t* dataIn, uint8_t len);

@@ -8,8 +8,8 @@
 
 #define DEBUG_STRING "[DEBUG] Sending CMD%d\r\n"
 
-volatile MemoryCardDriverStatus cardStatus = STATUS_CARD_NONE;
-
+static volatile MemoryCardDriverStatus cardStatus = STATUS_CARD_NONE;
+static CardCapacityType memCapacity = CCS_INVALID;
 //Init the Memory Card Driver
 void memCard_initDriver(void)
 {
@@ -497,17 +497,94 @@ CommandError memCard_readCSD(uint8_t* data)
         return CARD_RESPONSE_ERROR;
     }
     
+    CommandError cmdError = memCard_receiveBlockData(&data[0], 16);    
+    CARD_CS_SetHigh();
+    
+    return cmdError;
+}
+
+//Reads a block of data
+CommandError memCard_readBlock(uint8_t* data, uint32_t blockAddr)
+{
+    if (memCapacity != CCS_HIGH_CAPACITY)
+    {
+        //Shift by 9 bits (512) to convert block to byte addressing
+        blockAddr <<= FAT_BLOCK_SHIFT;
+    }
+    
+    //Send CMD17
+    uint8_t cmdData[6];
+    cmdData[0] = 0x40 | 17;
+    
+    //Pack the address
+    cmdData[1] = (blockAddr & 0xFF000000) >> 24;
+    cmdData[2] = (blockAddr & 0x00FF0000) >> 16;
+    cmdData[3] = (blockAddr & 0x0000FF00) >> 8;
+    cmdData[4] = (blockAddr & 0x000000FF);
+    
+    //Calculate CRC7
+    cmdData[5] = memCard_runCRC7(&cmdData[0], 5);
+    
+    CARD_CS_SetLow();
+    
+    //Send CMD
+    SPI1_sendBytes(&cmdData[0], 6);
+    
+    uint8_t header;
+    if (!memCard_receiveResponse_R1(&header))
+    {
+        CARD_CS_SetHigh();
+        return CARD_SPI_TIMEOUT;
+    }
+    
+    if (header != HEADER_NO_ERROR)
+    {
+        //Something went wrong
+        CARD_CS_SetHigh();
+        return CARD_RESPONSE_ERROR;
+    }
+    
+    CommandError cmdError = memCard_receiveBlockData(&data[0], FAT_BLOCK_SIZE);    
+    CARD_CS_SetHigh();
+    
+    return cmdError;
+}
+
+//Receives length bytes of data. Does not transmit the command
+CommandError memCard_receiveBlockData(uint8_t* data, uint16_t length)
+{
     //Data Header
     uint8_t count = 0;
     data[0] = 0xFF;
+    
     while ((count < READ_TIMEOUT_BYTES) && (data[0] == 0xFF))
     {
         data[0] = SPI1_exchangeByte(0xFF);
         count++;
     }
     
-    //Now, receive 16 byte packet
-    SPI1_receiveBytesTransmitFF(&data[0], 16);
+    uint8_t tempLen;
+    uint16_t index = 0;
+    do
+    {
+        if (length >= UINT8_MAX)
+        {
+            tempLen = UINT8_MAX;
+            length -= UINT8_MAX;
+        }
+        else
+        {
+            tempLen = length & 0xFF;
+            length = 0;
+        }
+
+        //Receive Data
+        SPI1_receiveBytesTransmitFF(&data[index], tempLen);
+        
+        //Increment memory index
+        index += tempLen;
+
+    } while (length != 0);
     
     uint8_t crcResp[2];
     
@@ -516,19 +593,12 @@ CommandError memCard_readCSD(uint8_t* data)
     
     CARD_CS_SetHigh();
     
-    
     //CRC16 CCIT Polynomial
     //0x1021
     
     //TODO: Verify the Checksum
     
-    return CARD_SPI_TIMEOUT;
-}
-
-//Reads a block of data
-CommandError memCard_readBlock(uint8_t* data, uint32_t blockAddr)
-{
-    return CARD_SPI_TIMEOUT;
+    return CARD_NO_ERROR;
 }
 
 //Compute CRC7 for the memory card commands

@@ -35,6 +35,9 @@
 #include "memoryCard.h"
 #include "unitTests.h"
 
+#include <stdint.h>
+#include <stdbool.h>
+
 //#define UNIT_TEST_ENABLE
 
 void onCardChange(void)
@@ -73,6 +76,9 @@ int main(void)
 #ifdef UNIT_TEST_ENABLE
     unitTest_runSequence();
 #endif
+    
+    uint8_t buffer[512];
+    memCard_receiveBlockData(&buffer[0], 0);
     
     while(1)
     {
