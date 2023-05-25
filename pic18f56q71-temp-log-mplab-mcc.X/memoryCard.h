@@ -11,6 +11,9 @@ extern "C" {
 #include "mcc_generated_files/system/pins.h"
 #include "mcc_generated_files/clc/clc2.h"
 
+//If defined, all commands are printed to terminal
+#define MEM_CARD_DEBUG_ENABLE
+    
 //Macro for card insert / detect
 #define IS_CARD_ATTACHED() (!CLC2_OutputStatusGet())
     
@@ -19,6 +22,9 @@ extern "C" {
     
 //How many times will the driver attempt to init the Card (ACMD41 / CMD1)
 #define INIT_RETRIES 100
+    
+//If any stage of init fails, the driver will retry this many times before giving up
+#define FULL_RETRIES 3
     
 //Check Pattern during configuration (Can be any value)
 #define CHECK_PATTERN 0xA5
@@ -87,7 +93,8 @@ extern "C" {
     } CardStatus;
     
     typedef enum {
-        CARD_NO_ERROR = 0, CARD_SPI_TIMEOUT, CARD_RESPONSE_ERROR, CARD_ILLEGAL_CMD, CARD_VOLTAGE_NOT_SUPPORTED
+        CARD_NO_ERROR = 0, CARD_SPI_TIMEOUT, CARD_CRC_ERROR, CARD_RESPONSE_ERROR,
+                CARD_ILLEGAL_CMD, CARD_VOLTAGE_NOT_SUPPORTED, CARD_PATTERN_ERROR
     } CommandError;
     
     typedef enum {

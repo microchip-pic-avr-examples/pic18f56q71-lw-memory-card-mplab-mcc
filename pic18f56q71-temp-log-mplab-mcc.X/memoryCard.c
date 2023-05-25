@@ -6,6 +6,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define DEBUG_STRING "[DEBUG] Sending CMD%d\r\n"
+
 volatile MemoryCardDriverStatus cardStatus = STATUS_CARD_NONE;
 
 //Init the Memory Card Driver
@@ -21,117 +23,162 @@ void memCard_initDriver(void)
 //Must be called whenever a card is inserted
 bool memCard_initCard(void)
 {
-    printf("Memory card detected\r\n");
+    printf("Beginning memory card configuration...\r\n");
     
     //Move to 400 kHz baud to start
     SPI1_setSpeed(SPI_400KHZ_BAUD);
     
-    //Reset the Card
-    SPI1_sendResetSequence();
+    bool good = true;
     
-    //CMD0 - Reset
-    CommandStatus status;
-    status.data = memCard_sendCMD_R1(0x00, CARD_NO_DATA);
-    //printf("Return Code: 0x%x\r\n", status.data);
-    
-    //CMD8
-    CommandError err = memCard_configureCard();
-    if (err != CARD_NO_ERROR)
+    for (uint8_t fullRetryCount = 0; fullRetryCount < FULL_RETRIES; fullRetryCount++)
     {
-        printf("CMD8 failed to configure card\r\n");
-        cardStatus = STATUS_CARD_ERROR;
-        return false;
-    }    
+        printf("Attempt %d of %d\r\n", (fullRetryCount + 1), FULL_RETRIES);
         
-    //Check for High Capacity Support
-    //CMD58
-    CardCapacityType memCapacity = CCS_INVALID;
-    memCapacity = memCard_getCapacityType();
-    
-    switch (memCapacity)
-    {
-        case CCS_LOW_CAPACITY:
-        {
-            printf("Card is not high capacity type\r\n");
-            break;
-        }
-        case CCS_HIGH_CAPACITY:
-        {
-            printf("Card is high capacity type\r\n");
-            break;
-        }
-        default:
-        {
-            printf("CMD58 was unable to determine capacity support\r\n");
-        }
-    }
+        //Reset the Card
+        SPI1_sendResetSequence();
 
-    uint8_t count = 1;
-    uint32_t initParam = 0x40000000;
-    
-    //Try to run ACMD41
-    status.data = memCard_sendACMD_R1(41, initParam);
-    
-    //Check to see if ACMD41 is accepted
-    if (status.illegal_cmd_error)
-    {
-        //Illegal Command, switch to CMD1
-        while (status.is_idle)
+        //CMD0 - Reset
+        CommandStatus status;
+        status.data = memCard_sendCMD_R1(0x00, CARD_NO_DATA);
+        //printf("Return Code: 0x%x\r\n", status.data);
+
+        //CMD8
+        CommandError err = memCard_configureCard();
+        if (err != CARD_NO_ERROR)
         {
-            //CMD1
-            status.data = memCard_sendCMD_R1(1, CARD_NO_DATA);
-            
-            if (count >= INIT_RETRIES)
+            printf("[ERROR] CMD8 failed to configure card ( ");
+            switch (err)
             {
-                printf("CMD1 failed to init card\r\n");
-                cardStatus = STATUS_CARD_ERROR;
-                return false;
+                case CARD_NO_ERROR:
+                {
+                    printf("CARD_NO_ERROR");
+                    break;
+                }
+                case CARD_SPI_TIMEOUT:
+                {
+                    printf("CARD_SPI_TIMEOUT");
+                    break;
+                }
+                case CARD_CRC_ERROR:
+                {
+                    printf("CARD_CRC_ERROR");
+                    break;
+                }
+                case CARD_RESPONSE_ERROR:
+                {
+                    printf("CARD_RESPONSE_ERROR");
+                    break;
+                }
+                case CARD_ILLEGAL_CMD:
+                {
+                    printf("CARD_ILLEGAL_CMD");
+                    break;
+                }
+                case CARD_VOLTAGE_NOT_SUPPORTED:
+                {
+                    printf("CARD_VOLTAGE_NOT_SUPPORTED");
+                    break;
+                }
+                case CARD_PATTERN_ERROR:
+                {
+                    printf("CARD_PATTERN_ERROR");
+                    break;
+                }
+                default:
+                    printf("???");
             }
-            else
+            printf(" )\r\n");
+            continue;
+        }    
+
+        //Check for High Capacity Support
+        //CMD58
+        CardCapacityType memCapacity = CCS_INVALID;
+        memCapacity = memCard_getCapacityType();
+
+        if (memCapacity == CCS_INVALID)
+        {
+            printf("[WARN] CMD58 was unable to determine capacity support\r\n");
+        }
+        
+        uint8_t count = 1;
+        uint32_t initParam = 0x40000000;
+
+        //Reset flag to true
+        good = true;
+        
+        //Try to run ACMD41
+        status.data = memCard_sendACMD_R1(41, initParam);
+
+        //Check to see if ACMD41 is accepted
+        if (status.illegal_cmd_error)
+        {
+            //Illegal Command, switch to CMD1
+            while ((status.is_idle) && (good))
             {
-                DELAY_milliseconds(1);
-                count++;
+                //CMD1
+                status.data = memCard_sendCMD_R1(1, CARD_NO_DATA);
+
+                if (count >= INIT_RETRIES)
+                {
+                    printf("[ERROR] CMD1 failed to init card\r\n");
+                    good = false;
+                }
+                else
+                {
+                    DELAY_milliseconds(1);
+                    count++;
+                }
             }
         }
-    }
-    else
-    {
-        //Valid Command
-        while (status.is_idle)
+        else
         {
-            //ACMD41
-            //0x77 - First Packet
-            //0x69 - Second Packet
-            status.data = memCard_sendACMD_R1(41, initParam);
-            
-            if (count >= INIT_RETRIES)
+            //Valid Command
+            while ((status.is_idle) && (good))
             {
-                printf("ACMD41 failed to init card\r\n");
-                cardStatus = STATUS_CARD_ERROR;
-                return false;
-            }
-            else
-            {
-                DELAY_milliseconds(1);
-                count++;
+                //ACMD41
+                //0x77 - First Packet
+                //0x69 - Second Packet
+                status.data = memCard_sendACMD_R1(41, initParam);
+
+                if (count >= INIT_RETRIES)
+                {
+                    printf("[ERROR] ACMD41 failed to init card\r\n");
+                    good = false;
+                }
+                else
+                {
+                    DELAY_milliseconds(1);
+                    count++;
+                }
             }
         }
-    }
-    
-    //Set Block Size to 512B
-    //CMD16
-    if (memCapacity != CCS_HIGH_CAPACITY)
-    {
-        status.data = memCard_sendCMD_R1(16, FAT_BLOCK_SIZE);
-        if (status.data != HEADER_NO_ERROR)
+        
+        if (!good)
         {
-            printf("Unable to set BLOCK SIZE\r\n");
+            //Something went wrong!
+            continue;
         }
+
+        //Set Block Size to 512B
+        //CMD16
+        if (memCapacity != CCS_HIGH_CAPACITY)
+        {
+            status.data = memCard_sendCMD_R1(16, FAT_BLOCK_SIZE);
+            if (status.data != HEADER_NO_ERROR)
+            {
+                printf("[WARN] Unable to set BLOCK SIZE\r\n");
+            }
+        }
+
+        cardStatus = STATUS_CARD_READY;
+        printf("Memory card - READY\r\n");
+        return true;
     }
     
-    cardStatus = STATUS_CARD_READY;
-    printf("Memory card initialized\r\n");
-    return true;
+    printf("[!] Unable to initialize memory card\r\n");
+    cardStatus = STATUS_CARD_ERROR;
+    return false;
 }
 
 //Returns the status of the memory card
@@ -172,6 +219,10 @@ CommandError memCard_configureCard(void)
     //0x40 - Fixed + CMD8
     memPoolTx[0] = 0x40 | 8;
     
+#ifdef MEM_CARD_DEBUG_ENABLE
+    printf(DEBUG_STRING, 8);
+#endif
+    
     //Load Data
     memPoolTx[1] = 0x00;
     memPoolTx[2] = 0x00;
@@ -206,7 +257,7 @@ CommandError memCard_configureCard(void)
     {
         //Bad CRC - Exit
         CARD_CS_SetHigh();
-        return CARD_RESPONSE_ERROR;
+        return CARD_CRC_ERROR;
     }
     
     //Now capture 4 more bytes
@@ -235,7 +286,7 @@ CommandError memCard_configureCard(void)
     //Finally, match check pattern
     if (memPoolRx[3] != CHECK_PATTERN)
     {
-        return CARD_RESPONSE_ERROR;
+        return CARD_PATTERN_ERROR;
     }
     
     return CARD_NO_ERROR;
@@ -253,6 +304,10 @@ uint8_t memCard_sendCMD_R1(uint8_t commandIndex, uint32_t data)
     //Prepare Command Header
     memPool[0] = 0x40; 
     memPool[0] |= commandIndex;
+    
+#ifdef MEM_CARD_DEBUG_ENABLE
+    printf(DEBUG_STRING, commandIndex);
+#endif
     
     //Load Data
     memPool[1] = (data & 0xFF000000) >> 24;
@@ -305,6 +360,10 @@ CardCapacityType memCard_getCapacityType(void)
     //0x40 - Fixed + CMD58
     memPoolTx[0] = 0x40 | 8;
     
+#ifdef MEM_CARD_DEBUG_ENABLE
+    printf(DEBUG_STRING, 58);
+#endif
+    
     //No data!
     memPoolTx[1] = 0x00;
     memPoolTx[2] = 0x00;
@@ -352,7 +411,7 @@ CardCapacityType memCard_getCapacityType(void)
 
 //Returns an R1 type response
 bool memCard_receiveResponse_R1(uint8_t* dst)
-{
+{    
     bool done = false;
     uint8_t count = 0;
     CommandStatus stat;
