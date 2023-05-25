@@ -507,7 +507,7 @@ CommandError memCard_readCSD(uint8_t* data)
     }
     
     //Now, receive 16 byte packet
-    SPI1_receiveBytesTransmitFF(&data[1], 16);
+    SPI1_receiveBytesTransmitFF(&data[0], 16);
     
     uint8_t crcResp[2];
     
