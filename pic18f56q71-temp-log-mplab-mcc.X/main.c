@@ -88,11 +88,13 @@ int main(void)
     FATFS fs;
     
     const char* filename = "TEST.TXT";
+    const char* testWrite = "New data";
+    const uint16_t wLen = 8;
     
-    char buffer[127];
-    uint16_t len = 0;
+    char rxBuffer[127];
+    uint16_t rxLen = 0, bwLen = 0;
     
-    DRESULT mntResult;
+    FRESULT mntResult;
     FRESULT result;
     
     while(1)
@@ -127,15 +129,43 @@ int main(void)
 #endif
                     if (result == FR_OK)
                     {
-                        if (pf_read(&buffer[0], 126, &len) == FR_OK)
+                        if (pf_read(&rxBuffer[0], 126, &rxLen) == FR_OK)
                         {
-                            buffer[len] = '\0';
-                            printf("Printing file \"%s\"\r\n> %s\r\n", filename, buffer);
+                            rxBuffer[rxLen] = '\0';
+                            printf("Printing file \"%s\"\r\n> %s\r\n", filename, rxBuffer);
                         }
                         else
                         {
                             printf("[ERROR] Failed to open file\r\n");
                         }
+                        
+                        result = pf_lseek(0);
+                        if (result == FR_OK)
+                        {
+                            result = pf_write(&testWrite[0], wLen, &bwLen);
+                            if (result == FR_OK)
+                            {
+                                result = pf_write(0,0, &bwLen);
+                                if (result == FR_OK)
+                                {
+                                    printf("Write success!\r\n");
+                                }
+                                else
+                                {
+                                    printf("[ERROR] Failed to finalize write\r\n");
+                                }
+                            }
+                            else
+                            {
+                                printf("[ERROR] Failed to load write data\r\n");
+                            }
+                        }
+                        else
+                        {
+                            printf("[ERROR] Failed to seek file\r\n");
+                        }
+                        
+                        
                     }
                     else
                     {

@@ -14,11 +14,14 @@ static CardCapacityType memCapacity = CCS_INVALID;
 static volatile uint8_t cache[512];
 static uint32_t cacheBlockAddr;
 
+static uint16_t writeSize;
+
 //Init the Memory Card Driver
 void memCard_initDriver(void)
 {
     //Clear the Block Address
     cacheBlockAddr = 0xFFFFFFFF;
+    writeSize = WRITE_SIZE_INVALID;
     
     if (IS_CARD_ATTACHED())
     {
@@ -32,9 +35,15 @@ bool memCard_initCard(void)
 {
     printf("Beginning memory card configuration...\r\n");
         
+    //Invalidate the Cache
+    cacheBlockAddr = 0xFFFFFFFF;
+
+    //Invalidate write counter
+    writeSize = WRITE_SIZE_INVALID;
+    
     //Move to 400 kHz baud to start
     SPI1_setSpeed(SPI_400KHZ_BAUD);
-    
+        
     bool good = true;
     
     for (uint8_t fullRetryCount = 0; fullRetryCount < FULL_RETRIES; fullRetryCount++)
@@ -239,6 +248,9 @@ void memCard_detach(void)
     
     //Invalidate the Cache
     cacheBlockAddr = 0xFFFFFFFF;
+
+    //Invalidate write counter
+    writeSize = WRITE_SIZE_INVALID;
 }
 
 //Calls CMD8 to configure the operating voltages
@@ -563,6 +575,204 @@ bool memCard_readFromDisk(uint32_t sect, uint16_t offset, uint8_t* data, uint16_
     return true;
 }
 
+//Prepare to write to a specified sector.
+//Configures write iterators
+bool memCard_prepareWrite(uint32_t sector)
+{
+    if (cardStatus != STATUS_CARD_READY)
+    {
+        return false;
+    }
+    
+#ifdef MEM_CARD_DEBUG_ENABLE
+    printf("[DEBUG FILE I/O] Preparing for write on sector %d\r\n", sector);
+#endif
+    
+    //Set the target
+    cacheBlockAddr = sector;
+    
+    //Set the write value
+    writeSize = 0;
+    
+    for (uint16_t i = 0; i < FAT_BLOCK_SIZE; i++)
+    {
+        cache[i] = 0x00;
+    }
+    
+    return true;
+}
+
+//Queues dLen bytes of data to write, sets bw to the number of bytes queued
+//Returns true if successful, false if failed
+bool memCard_queueWrite(uint8_t* data, uint16_t dLen)
+{   
+    //Card isn't ready
+    if (cardStatus != STATUS_CARD_READY)
+    {
+        return false;
+    }
+
+    //Check write counter
+    if ((writeSize == WRITE_SIZE_INVALID) || (writeSize >= FAT_BLOCK_SIZE))
+    {
+        return false;
+    }
+    
+    uint16_t count = 0;
+    while ((writeSize < FAT_BLOCK_SIZE) && (count < dLen))
+    {
+        cache[writeSize] = data[count];
+        
+        writeSize++;
+        count++;
+    }
+    
+#ifdef MEM_CARD_DEBUG_ENABLE
+    printf("[DEBUG FILE I/O] Queued %d bytes for write\r\n", count);
+#endif
+    
+    if (count != dLen)
+    {
+        //Out of space!
+        return false;
+    }
+    
+    return true;
+}
+
+//Writes the current (modified) cache to the memory card
+CommandError memCard_writeBlock(void)
+{
+    if (cardStatus != STATUS_CARD_READY)
+    {
+        return CARD_NOT_INIT;
+    }
+    
+    if ((writeSize == FAT_BLOCK_SIZE) || (writeSize >= FAT_BLOCK_SIZE))
+    {
+        return CARD_WRITE_SIZE_ERROR;
+    }
+    
+#ifdef MEM_CARD_DEBUG_ENABLE
+    printf("[DEBUG FILE I/O] Writing %d bytes to sector %d \r\n", writeSize, cacheBlockAddr);
+#endif
+    
+    //Send CMD24
+    uint8_t cmdData[6];
+    cmdData[0] = 0x40 | 24;
+    
+#ifdef MEM_CARD_DEBUG_ENABLE
+    printf(DEBUG_STRING, 24);
+#endif
+    
+    //Pack the address
+    cmdData[1] = (cacheBlockAddr & 0xFF000000) >> 24;
+    cmdData[2] = (cacheBlockAddr & 0x00FF0000) >> 16;
+    cmdData[3] = (cacheBlockAddr & 0x0000FF00) >> 8;
+    cmdData[4] = (cacheBlockAddr & 0x000000FF);
+    
+    cmdData[5] = memCard_runCRC7(&cmdData[0], 5);
+    
+    CARD_CS_SetLow();
+    
+    //Send CMD
+    SPI1_sendBytes(&cmdData[0], 6);
+    
+    //Get the Response
+    uint8_t header;
+    if (!memCard_receiveResponse_R1(&header))
+    {
+        CARD_CS_SetHigh();
+#ifdef MEM_CARD_DEBUG_ENABLE
+    printf("[ERROR] No response returned\r\n");
+#endif
+
+        return CARD_SPI_TIMEOUT;
+    }
+    
+    //Padding Byte
+    SPI1_sendByte(0xFF);
+
+    //Send Data Packet
+    
+    //Header Byte
+    SPI1_sendByte(0xFE);
+    
+    //Send Data!
+    SPI1_sendBytes(&cache[0], FAT_BLOCK_SIZE);
+        
+    //TODO: Calculate CRC!
+    
+    //CRC (Usually ignored...)
+    SPI1_sendByte(0xFF);
+    SPI1_sendByte(0xFF);
+    
+    //Receive Data Response
+    RespToken eToken;
+    uint8_t rCount = 0;
+    bool good = false;
+    do 
+    {
+        eToken.data = SPI1_exchangeByte(0xFF);
+        
+        //Valid header!
+        if (eToken.data != 0xFF)
+        {
+            good = true;
+        }
+        
+        rCount++;
+    } while ((rCount < WRITE_TIMEOUT_BYTES) && (!good));
+    
+    if (rCount >= WRITE_TIMEOUT_BYTES)
+    {
+        CARD_CS_SetHigh();
+        return CARD_SPI_TIMEOUT;
+    }
+    
+    //Type - Error Token
+    if (eToken.ErrorToken.valid_header_n == 0b000)
+    {
+        if (eToken.data != 0x00)
+        {
+            //Error returned!
+            CARD_CS_SetHigh();
+            return CARD_RESPONSE_ERROR;
+        }
+    }
+    else
+    {
+        //Type - Data Token
+        if (eToken.DataToken.status != 0b010)
+        {
+            //Error returned!
+            CARD_CS_SetHigh();
+            return CARD_RESPONSE_ERROR;
+        }
+    }
+    
+#ifdef MEM_CARD_DEBUG_ENABLE
+    printf("[DEBUG] Waiting for busy to clear...\r\n");
+#endif
+    
+    //Wait for busy to clear...
+    //Active LOW
+    
+    uint8_t resp = 0xFF;
+    while (resp != 0xFF)
+    {
+        resp = SPI1_exchangeByte(0xFF);
+    }
+    
+    CARD_CS_SetHigh();
+    
+#ifdef MEM_CARD_DEBUG_ENABLE
+    printf("[DEBUG] Busy bit has cleared - write done!\r\n");
+#endif
+    
+    return CARD_NO_ERROR;
+}
+
 //Reads a block of data, and loads it into cache
 CommandError memCard_readBlock(uint32_t blockAddr)
 {
@@ -571,8 +781,24 @@ CommandError memCard_readBlock(uint32_t blockAddr)
         return CARD_NOT_INIT;
     }
     
+    if (writeSize != WRITE_SIZE_INVALID)
+    {
 #ifdef MEM_CARD_DEBUG_ENABLE
-    printf("[DEBUG FILE I/O] Fetching Sector: %d\r\n", blockAddr);
+    printf("[DEBUG FILE I/O] Read failed due to write in progress\r\n");
+#endif
+        return CARD_WRITE_IN_PROGRESS;
+    }
+    
+    if (blockAddr == cacheBlockAddr)
+    {
+#ifdef MEM_CARD_DEBUG_ENABLE
+    printf("[DEBUG FILE I/O] Sector %d fetch skipped due to cache\r\n");
+#endif
+        return CARD_NO_ERROR;
+    }
+    
+#ifdef MEM_CARD_DEBUG_ENABLE
+    printf("[DEBUG FILE I/O] Fetching Sector %d\r\n", blockAddr);
 #endif
     
     uint32_t compBlockAddr = blockAddr;

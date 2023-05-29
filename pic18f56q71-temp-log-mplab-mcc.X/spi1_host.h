@@ -51,7 +51,10 @@ extern "C" {
     void SPI1_exchangeBytes(uint8_t* txData, uint8_t* rxData, uint8_t len);
     
     //Sends LEN bytes. Received data is discarded
-    void SPI1_sendBytes(uint8_t* txData, uint8_t len);
+    void SPI1_sendBytes(uint8_t* txData, uint16_t len);
+    
+    //Transmit LEN zeros
+    void SPI1_fillZeros(uint16_t len);
     
     //Receives LEN bytes
     void SPI1_receiveBytes(uint8_t* rxData, uint8_t len);

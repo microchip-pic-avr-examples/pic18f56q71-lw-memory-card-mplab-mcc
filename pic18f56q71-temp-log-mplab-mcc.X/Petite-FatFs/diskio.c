@@ -49,22 +49,33 @@ DRESULT disk_writep (
 	DWORD sc		/* Sector number (LBA) or Number of bytes to send */
 )
 {
-	DRESULT res;
+	DRESULT res = RES_OK;
 
 
 	if (!buff) {
 		if (sc) {
 
 			// Initiate write process
+            if (!memCard_prepareWrite(sc))
+            {
+                res = RES_NOTRDY;
+            }
 
 		} else {
 
 			// Finalize write process
-
+            if (memCard_writeBlock() != CARD_NO_ERROR)
+            {
+                res = RES_ERROR;
+            }
 		}
 	} else {
 
 		// Send data to the disk
+        if (!memCard_queueWrite(buff, sc))
+        {
+            res = RES_ERROR;
+        }
 
 	}
 

@@ -144,7 +144,7 @@ void SPI1_exchangeBytes(uint8_t* txData, uint8_t* rxData, uint8_t len)
 }
 
 //Sends LEN bytes. Received data is discarded.
-void SPI1_sendBytes(uint8_t* txData, uint8_t len)
+void SPI1_sendBytes(uint8_t* txData, uint16_t len)
 {
     //Clear data buffers
     SPI1STATUSbits.CLRBF = 1;
@@ -160,10 +160,11 @@ void SPI1_sendBytes(uint8_t* txData, uint8_t len)
     SPI1TXB = txData[0];
     
     //Set data length
-    SPI1TCNTL = len;
+    SPI1TCNTH = (len >> 8) & 0xFF;
+    SPI1TCNTL = len & 0xFF;
     
     //Write / Read Index
-    uint8_t wIndex = 1;
+    uint16_t wIndex = 1;
     
     //While counter is not zero
     while (!SPI1INTFbits.TCZIF)
@@ -172,6 +173,41 @@ void SPI1_sendBytes(uint8_t* txData, uint8_t len)
         {
             //TX Buffer has space, load next byte (until we hit the LEN)
             SPI1TXB = txData[wIndex];
+            wIndex++;
+        }
+    }
+}
+
+//Transmit LEN zeros
+void SPI1_fillZeros(uint16_t len)
+{
+    //Clear data buffers
+    SPI1STATUSbits.CLRBF = 1;
+    
+    //Enable TX and Disable RX
+    SPI1CON2bits.TXR = 1;
+    SPI1CON2bits.RXR = 0;
+    
+    //Clear status bit
+    SPI1INTFbits.TCZIF = 0;
+    
+    //Load Byte 0
+    SPI1TXB = 0x00;
+    
+    //Set data length
+    SPI1TCNTH = (len >> 8) & 0xFF;
+    SPI1TCNTL = len & 0xFF;
+    
+    //Write / Read Index
+    uint16_t wIndex = 1;
+    
+    //While counter is not zero
+    while (!SPI1INTFbits.TCZIF)
+    {
+        if ((PIR3bits.SPI1TXIF) && (wIndex < len))
+        {
+            //TX Buffer has space, load next byte (until we hit the LEN)
+            SPI1TXB = 0x00;
             wIndex++;
         }
     }

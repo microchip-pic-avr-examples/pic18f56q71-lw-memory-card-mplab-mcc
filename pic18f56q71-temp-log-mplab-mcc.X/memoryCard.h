@@ -23,6 +23,9 @@ extern "C" {
 //Number of bytes to wait for data response
 #define READ_TIMEOUT_BYTES 10
     
+//Number of bytes to wait for the memroy card to respond to a write
+#define WRITE_TIMEOUT_BYTES 10
+    
 //How many times will the driver attempt to init the Card (ACMD41 / CMD1)
 #define INIT_RETRIES 100
     
@@ -52,6 +55,8 @@ extern "C" {
 #define CARD_BAD_OCR 0xFFFFFFFF
 #define CARD_NO_DATA 0x00000000
     
+#define WRITE_SIZE_INVALID 0xFFFF
+    
 //Number of bytes to transfer
 #define FAT_BLOCK_SIZE 512
     
@@ -72,6 +77,27 @@ extern "C" {
         };
         uint8_t data;
     } CommandStatus;
+    
+        typedef union 
+    {
+        struct {
+            unsigned error : 1;
+            unsigned cc_error : 1;
+            unsigned card_ecc_error : 1;
+            unsigned range_error : 1;
+            unsigned locked_error : 1;
+            unsigned valid_header_n : 3; //These bits are 0 if valid
+        } ErrorToken;
+        struct {
+            unsigned one : 1; //This bit is always 1
+            unsigned status : 3;
+            unsigned zero : 1; //This bit is always 1
+            unsigned dnc : 3; //Don't care (if all 000s, then this is an error token)
+        } DataToken;
+
+        uint8_t data;
+    } RespToken;
+
     
     typedef union 
     {
@@ -100,7 +126,8 @@ extern "C" {
     
     typedef enum {
         CARD_NO_ERROR = 0, CARD_SPI_TIMEOUT, CARD_CRC_ERROR, CARD_RESPONSE_ERROR,
-                CARD_ILLEGAL_CMD, CARD_VOLTAGE_NOT_SUPPORTED, CARD_PATTERN_ERROR, CARD_NOT_INIT
+        CARD_ILLEGAL_CMD, CARD_VOLTAGE_NOT_SUPPORTED, CARD_PATTERN_ERROR, 
+        CARD_WRITE_IN_PROGRESS, CARD_WRITE_SIZE_ERROR, CARD_NOT_INIT
     } CommandError;
     
     typedef enum {
@@ -154,8 +181,19 @@ extern "C" {
     //Loads data from the memory card into the specified buffer at a block address and byte offset
     bool memCard_readFromDisk(uint32_t sect, uint16_t offset, uint8_t* data, uint16_t nBytes);
     
-    //Reads a block of data at address
-    CommandError memCard_readBlock(uint32_t blockAddr);
+    //Prepare to write to a specified sector.
+    //Clears cache to 0, updates write iterators
+    bool memCard_prepareWrite(uint32_t sector);
+    
+    //Queues dLen bytes of data to write, sets bw to the number of bytes queued
+    //Returns true if successful, false if failed
+    bool memCard_queueWrite(uint8_t* data, uint16_t dLen);
+    
+    //Writes the current (modified) cache to the memory card
+    CommandError memCard_writeBlock(void);
+    
+    //Reads a sector of data
+    CommandError memCard_readBlock(uint32_t sector);
     
     //Receives length bytes of data. Does not transmit the command
     CommandError memCard_receiveBlockData(uint8_t* data, uint16_t length);
