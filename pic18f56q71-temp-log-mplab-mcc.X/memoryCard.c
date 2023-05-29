@@ -10,9 +10,16 @@
 
 static volatile MemoryCardDriverStatus cardStatus = STATUS_CARD_NONE;
 static CardCapacityType memCapacity = CCS_INVALID;
+
+static volatile uint8_t cache[512];
+static uint32_t cacheBlockAddr;
+
 //Init the Memory Card Driver
 void memCard_initDriver(void)
 {
+    //Clear the Block Address
+    cacheBlockAddr = 0xFFFFFFFF;
+    
     if (IS_CARD_ATTACHED())
     {
         cardStatus = STATUS_CARD_NOT_INIT;
@@ -24,7 +31,7 @@ void memCard_initDriver(void)
 bool memCard_initCard(void)
 {
     printf("Beginning memory card configuration...\r\n");
-    
+        
     //Move to 400 kHz baud to start
     SPI1_setSpeed(SPI_400KHZ_BAUD);
     
@@ -171,14 +178,19 @@ bool memCard_initCard(void)
             }
         }
         
+        //Card is now usable for memory operations
+        cardStatus = STATUS_CARD_READY;
+        printf("Memory card - READY\r\n");
+        
         //Set SPI Frequency
         if (memCard_setupFastSPI())
         {
             printf("[WARN] Unable to change SPI clock speeds\r\n");
         }
-
-        cardStatus = STATUS_CARD_READY;
-        printf("Memory card - READY\r\n");
+        
+        //Load Block 0 into the cache
+        memCard_readBlock(0x00);
+        
         return true;
     }
     
@@ -224,6 +236,9 @@ void memCard_attach(void)
 void memCard_detach(void)
 {
     cardStatus = STATUS_CARD_NONE;
+    
+    //Invalidate the Cache
+    cacheBlockAddr = 0xFFFFFFFF;
 }
 
 //Calls CMD8 to configure the operating voltages
@@ -461,6 +476,9 @@ bool memCard_receiveResponse_R1(uint8_t* dst)
 //Reads the 16-byte CSD Register
 CommandError memCard_readCSD(uint8_t* data)
 {
+    if (cardStatus != STATUS_CARD_READY)
+        return false;
+    
     //Send CSD read command
     //CMD9
     
@@ -503,24 +521,81 @@ CommandError memCard_readCSD(uint8_t* data)
     return cmdError;
 }
 
-//Reads a block of data
-CommandError memCard_readBlock(uint8_t* data, uint32_t blockAddr)
+//Loads data from the memory card into the specified buffer at a block address and byte offset
+bool memCard_readFromDisk(uint32_t sect, uint16_t offset, uint8_t* data, uint16_t nBytes)
 {
+    //Card not initialized
+    if (cardStatus != STATUS_CARD_READY)
+        return false;
+    
+    if (sect != cacheBlockAddr)
+    {
+        //Sector not loaded, need to read the value...
+        if (memCard_readBlock(sect) != CARD_NO_ERROR)
+        {
+            return false;
+        }
+    }
+#ifdef MEM_CARD_DEBUG_ENABLE
+    else
+    {
+        printf("[DEBUG FILE I/O] Cache Hit for Sector %d\r\n", sect);
+    }
+#endif
+    
+    //Copy data
+    uint16_t cachePos = offset;
+    for (uint16_t index = 0; index < nBytes; index++)
+    {
+        if (cachePos == FAT_BLOCK_SIZE)
+        {
+            //Out of the sector - need to load the next one!
+            if (memCard_readBlock(sect + 1) != CARD_NO_ERROR)
+            {
+                return false;
+            }
+            cachePos = 0;
+        }
+        data[index] = cache[cachePos];
+        cachePos++;
+    }
+    
+    return true;
+}
+
+//Reads a block of data, and loads it into cache
+CommandError memCard_readBlock(uint32_t blockAddr)
+{
+    if (cardStatus != STATUS_CARD_READY)
+    {
+        return CARD_NOT_INIT;
+    }
+    
+#ifdef MEM_CARD_DEBUG_ENABLE
+    printf("[DEBUG FILE I/O] Fetching Sector: %d\r\n", blockAddr);
+#endif
+    
+    uint32_t compBlockAddr = blockAddr;
+    
     if (memCapacity != CCS_HIGH_CAPACITY)
     {
         //Shift by 9 bits (512) to convert block to byte addressing
-        blockAddr <<= FAT_BLOCK_SHIFT;
+        compBlockAddr <<= FAT_BLOCK_SHIFT;
     }
     
     //Send CMD17
     uint8_t cmdData[6];
     cmdData[0] = 0x40 | 17;
     
+#ifdef MEM_CARD_DEBUG_ENABLE
+    printf(DEBUG_STRING, 17);
+#endif
+    
     //Pack the address
-    cmdData[1] = (blockAddr & 0xFF000000) >> 24;
-    cmdData[2] = (blockAddr & 0x00FF0000) >> 16;
-    cmdData[3] = (blockAddr & 0x0000FF00) >> 8;
-    cmdData[4] = (blockAddr & 0x000000FF);
+    cmdData[1] = (compBlockAddr & 0xFF000000) >> 24;
+    cmdData[2] = (compBlockAddr & 0x00FF0000) >> 16;
+    cmdData[3] = (compBlockAddr & 0x0000FF00) >> 8;
+    cmdData[4] = (compBlockAddr & 0x000000FF);
     
     //Calculate CRC7
     cmdData[5] = memCard_runCRC7(&cmdData[0], 5);
@@ -534,6 +609,10 @@ CommandError memCard_readBlock(uint8_t* data, uint32_t blockAddr)
     if (!memCard_receiveResponse_R1(&header))
     {
         CARD_CS_SetHigh();
+#ifdef MEM_CARD_DEBUG_ENABLE
+    printf("[ERROR] No response returned\r\n");
+#endif
+
         return CARD_SPI_TIMEOUT;
     }
     
@@ -541,13 +620,21 @@ CommandError memCard_readBlock(uint8_t* data, uint32_t blockAddr)
     {
         //Something went wrong
         CARD_CS_SetHigh();
+#ifdef MEM_CARD_DEBUG_ENABLE
+    printf("[ERROR] Command Error\r\n");
+#endif
+
+        
         return CARD_RESPONSE_ERROR;
     }
-    
-    CommandError cmdError = memCard_receiveBlockData(&data[0], FAT_BLOCK_SIZE);    
+
+    CommandError err = memCard_receiveBlockData(&cache[0], FAT_BLOCK_SIZE);
     CARD_CS_SetHigh();
     
-    return cmdError;
+    //Update Cache Address
+    cacheBlockAddr = blockAddr;
+        
+    return err;
 }
 
 //Receives length bytes of data. Does not transmit the command
@@ -563,28 +650,8 @@ CommandError memCard_receiveBlockData(uint8_t* data, uint16_t length)
         count++;
     }
     
-    uint8_t tempLen;
-    uint16_t index = 0;
-    do
-    {
-        if (length >= UINT8_MAX)
-        {
-            tempLen = UINT8_MAX;
-            length -= UINT8_MAX;
-        }
-        else
-        {
-            tempLen = length & 0xFF;
-            length = 0;
-        }
-
-        //Receive Data
-        SPI1_receiveBytesTransmitFF(&data[index], tempLen);
-        
-        //Increment memory index
-        index += tempLen;
-
-    } while (length != 0);
+    //Receive Data
+    SPI1_receiveBytesTransmitFF(&data[0], length);
     
     uint8_t crcResp[2];
     

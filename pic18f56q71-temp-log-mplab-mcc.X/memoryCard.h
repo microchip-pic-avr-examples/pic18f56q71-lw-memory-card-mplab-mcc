@@ -100,7 +100,7 @@ extern "C" {
     
     typedef enum {
         CARD_NO_ERROR = 0, CARD_SPI_TIMEOUT, CARD_CRC_ERROR, CARD_RESPONSE_ERROR,
-                CARD_ILLEGAL_CMD, CARD_VOLTAGE_NOT_SUPPORTED, CARD_PATTERN_ERROR
+                CARD_ILLEGAL_CMD, CARD_VOLTAGE_NOT_SUPPORTED, CARD_PATTERN_ERROR, CARD_NOT_INIT
     } CommandError;
     
     typedef enum {
@@ -151,8 +151,11 @@ extern "C" {
     //Reads the 16-byte CSD Register
     CommandError memCard_readCSD(uint8_t* data);
     
+    //Loads data from the memory card into the specified buffer at a block address and byte offset
+    bool memCard_readFromDisk(uint32_t sect, uint16_t offset, uint8_t* data, uint16_t nBytes);
+    
     //Reads a block of data at address
-    CommandError memCard_readBlock(uint8_t* data, uint32_t blockAddr);
+    CommandError memCard_readBlock(uint32_t blockAddr);
     
     //Receives length bytes of data. Does not transmit the command
     CommandError memCard_receiveBlockData(uint8_t* data, uint16_t length);

@@ -57,7 +57,7 @@ extern "C" {
     void SPI1_receiveBytes(uint8_t* rxData, uint8_t len);
     
     //Receives LEN bytes, and transmits 0xFF
-    void SPI1_receiveBytesTransmitFF(uint8_t* rxData, uint8_t len);
+    void SPI1_receiveBytesTransmitFF(uint8_t* rxData, uint16_t len);
     
     //Transmits a 6 byte header, then returns the next byte after
     uint8_t SPI1_sendCommand_R1(uint8_t* data);

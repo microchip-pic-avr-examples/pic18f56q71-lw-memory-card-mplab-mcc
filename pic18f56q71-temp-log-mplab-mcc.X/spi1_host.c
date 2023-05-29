@@ -218,7 +218,7 @@ void SPI1_receiveBytes(uint8_t* rxData, uint8_t len)
 }
 
 //Receives LEN bytes, and transmits 0xFF
-void SPI1_receiveBytesTransmitFF(uint8_t* rxData, uint8_t len)
+void SPI1_receiveBytesTransmitFF(uint8_t* rxData, uint16_t len)
 {
     //Clear data buffers
     SPI1STATUSbits.CLRBF = 1;
@@ -231,11 +231,14 @@ void SPI1_receiveBytesTransmitFF(uint8_t* rxData, uint8_t len)
     SPI1INTFbits.TCZIF = 0;
     
     //Set data length
-    SPI1TCNTL = len;
+    SPI1TCNTH = (len >> 8) & 0xFF;
+    SPI1TCNTL = len & 0xFF;
+    
+    SPI1TXB = 0xFF;
     
     //Write / Read Index
-    uint8_t rIndex = 0;
-    uint8_t wCount = 0;
+    uint16_t rIndex = 0;
+    uint16_t wCount = 1;
     
     //While counter is not zero
     while (!SPI1INTFbits.TCZIF)
