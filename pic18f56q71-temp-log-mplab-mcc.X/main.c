@@ -111,7 +111,6 @@ void writeFile(void)
             result = pf_write(&testWrite[0], wLen, &bwLen);
             if (result == FR_OK)
             {
-                pf_write("123", 3, &bwLen);
                 result = pf_write(0,0, &bwLen);
                 if (result == FR_OK)
                 {

@@ -682,6 +682,14 @@ CommandError memCard_writeBlock(void)
     printf("[DEBUG FILE I/O] Writing %d bytes to sector %d \r\n", writeSize, cacheBlockAddr);
 #endif
     
+    uint32_t compBlockAddr = cacheBlockAddr;
+    if (memCapacity != CCS_HIGH_CAPACITY)
+    {
+        //Shift by 9 bits (512) to convert block to byte addressing
+        compBlockAddr <<= FAT_BLOCK_SHIFT;
+    }
+
+    
     //Send CMD24
     uint8_t cmdData[6];
     cmdData[0] = 0x40 | 24;
@@ -691,10 +699,10 @@ CommandError memCard_writeBlock(void)
 #endif
     
     //Pack the address
-    cmdData[1] = (cacheBlockAddr & 0xFF000000) >> 24;
-    cmdData[2] = (cacheBlockAddr & 0x00FF0000) >> 16;
-    cmdData[3] = (cacheBlockAddr & 0x0000FF00) >> 8;
-    cmdData[4] = (cacheBlockAddr & 0x000000FF);
+    cmdData[1] = (compBlockAddr & 0xFF000000) >> 24;
+    cmdData[2] = (compBlockAddr & 0x00FF0000) >> 16;
+    cmdData[3] = (compBlockAddr & 0x0000FF00) >> 8;
+    cmdData[4] = (compBlockAddr & 0x000000FF);
     
     cmdData[5] = memCard_runCRC7(&cmdData[0], 5);
     
