@@ -46,6 +46,9 @@
 
 //#define UNIT_TEST_ENABLE
 
+#define READ_FILENAME "test_r.txt"
+#define WRITE_FILENAME "test_w.txt"
+
 void onCardChange(void)
 {
     if (IS_CARD_ATTACHED())
@@ -55,6 +58,83 @@ void onCardChange(void)
     else
     {
         memCard_detach();
+    }
+}
+
+void readFile(void)
+{
+    FRESULT result;
+    unsigned int rxLen = 0;
+    char rxBuffer[127];
+    const char* filename = READ_FILENAME;
+    
+    printf("Reading file \"%s\"\r\n", filename);
+    
+    //Open a file
+    result = pf_open(filename);
+#ifdef MEM_CARD_DEBUG_ENABLE
+    printf("[DEBUG] pf_open = %d\r\n", result);
+#endif
+    if (result == FR_OK)
+    {
+        if (pf_read(&rxBuffer[0], 126, &rxLen) == FR_OK)
+        {
+            rxBuffer[rxLen] = '\0';
+            printf("Printing file \"%s\"\r\n> %s\r\n", filename, rxBuffer);
+        }
+        else
+        {
+            printf("[ERROR] Failed to open file\r\n");
+        }
+    }
+}
+
+void writeFile(void)
+{
+    FRESULT result;
+    const char* filename = WRITE_FILENAME;
+    const char* testWrite = "New data";
+    const unsigned int wLen = 8;
+    
+    unsigned int bwLen = 0;
+
+    printf("Overwriting file \"%s\"\r\n", filename);
+    result = pf_open(filename);
+#ifdef MEM_CARD_DEBUG_ENABLE
+    printf("[DEBUG] pf_open = %d\r\n", result);
+#endif
+    if (result == FR_OK)
+    {
+        result = pf_lseek(0);
+        if (result == FR_OK)
+        {
+            result = pf_write(&testWrite[0], wLen, &bwLen);
+            if (result == FR_OK)
+            {
+                pf_write("123", 3, &bwLen);
+                result = pf_write(0,0, &bwLen);
+                if (result == FR_OK)
+                {
+                    printf("Write success!\r\n");
+                }
+                else
+                {
+                    printf("[ERROR] Failed to finalize write\r\n");
+                }
+            }
+            else
+            {
+                printf("[ERROR] Failed to load write data\r\n");
+            }
+        }
+        else
+        {
+            printf("[ERROR] Failed to seek file\r\n");
+        }
+    }                    
+    else
+    {
+        printf("[ERROR] Could not open file %s\r\n", filename);
     }
 }
 
@@ -87,15 +167,8 @@ int main(void)
     
     FATFS fs;
     
-    const char* filename = "TEST.TXT";
-    const char* testWrite = "New data";
-    const uint16_t wLen = 8;
-    
-    char rxBuffer[127];
-    uint16_t rxLen = 0, bwLen = 0;
-    
+   
     FRESULT mntResult;
-    FRESULT result;
     
     while(1)
     {
@@ -122,55 +195,9 @@ int main(void)
                 }
                 else
                 {
-                    //Open a file
-                    result = pf_open(filename);
-#ifdef MEM_CARD_DEBUG_ENABLE
-                    printf("[DEBUG] pf_open = %d\r\n", result);
-#endif
-                    if (result == FR_OK)
-                    {
-                        if (pf_read(&rxBuffer[0], 126, &rxLen) == FR_OK)
-                        {
-                            rxBuffer[rxLen] = '\0';
-                            printf("Printing file \"%s\"\r\n> %s\r\n", filename, rxBuffer);
-                        }
-                        else
-                        {
-                            printf("[ERROR] Failed to open file\r\n");
-                        }
-                        
-                        result = pf_lseek(0);
-                        if (result == FR_OK)
-                        {
-                            result = pf_write(&testWrite[0], wLen, &bwLen);
-                            if (result == FR_OK)
-                            {
-                                result = pf_write(0,0, &bwLen);
-                                if (result == FR_OK)
-                                {
-                                    printf("Write success!\r\n");
-                                }
-                                else
-                                {
-                                    printf("[ERROR] Failed to finalize write\r\n");
-                                }
-                            }
-                            else
-                            {
-                                printf("[ERROR] Failed to load write data\r\n");
-                            }
-                        }
-                        else
-                        {
-                            printf("[ERROR] Failed to seek file\r\n");
-                        }
-                        
-                        
-                    }
-                    else
-                    {
-                        printf("[ERROR] Could not open file %s\r\n", filename);
-                    }
+                    readFile();
+                    writeFile();
+                    readFile();
                 }
             }
             

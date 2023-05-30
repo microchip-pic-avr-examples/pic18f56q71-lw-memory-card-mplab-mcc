@@ -153,6 +153,9 @@ extern "C" {
     //Requests max clock speed info from card, and sets SPI frequency
     bool memCard_setupFastSPI(void);
     
+    //Calculates the checksum for a block of data
+    uint16_t memCard_calculateCRC16(uint8_t* data, uint16_t dLen);
+    
     //Notifies the driver that a card is now attached
     //DOES NOT INITIALIZE THE CARD
     void memCard_attach(void);

@@ -234,6 +234,31 @@ bool memCard_setupFastSPI(void)
     return false;
 }
 
+//Calculates the checksum for a block of data
+uint16_t memCard_calculateCRC16(uint8_t* data, uint16_t dLen)
+{
+    uint16_t result = 0x00;
+    
+    //Setup CRC
+    CRCCON0bits.EN = 0;
+    CRCCON0bits.SETUP = 0b00;
+    
+    CRCOUT = 0x00;
+    
+    CRCCON0bits.EN = 1;
+    
+    CRC_StartCrc();
+
+    //Calculate
+    for (uint16_t i = 0; i < dLen; i++)
+    {
+        CRC_WriteData(data[i]);
+    }
+
+    result = CRC_GetCalculatedResult(false, 0x00) & 0xFFFF;
+    return result;
+}
+
 //Notifies the driver that a card is now attached
 //DOES NOT INITIALIZE THE CARD
 void memCard_attach(void)
@@ -648,7 +673,7 @@ CommandError memCard_writeBlock(void)
         return CARD_NOT_INIT;
     }
     
-    if ((writeSize == FAT_BLOCK_SIZE) || (writeSize >= FAT_BLOCK_SIZE))
+    if ((writeSize == WRITE_SIZE_INVALID) || (writeSize >= FAT_BLOCK_SIZE))
     {
         return CARD_WRITE_SIZE_ERROR;
     }
@@ -691,7 +716,8 @@ CommandError memCard_writeBlock(void)
     }
     
     //Padding Byte
-    SPI1_sendByte(0xFF);
+    //Do we need this?
+    //SPI1_sendByte(0xFF);
 
     //Send Data Packet
     
@@ -700,12 +726,12 @@ CommandError memCard_writeBlock(void)
     
     //Send Data!
     SPI1_sendBytes(&cache[0], FAT_BLOCK_SIZE);
-        
-    //TODO: Calculate CRC!
+      
+    uint16_t chkSum = memCard_calculateCRC16(&cache[0], FAT_BLOCK_SIZE);
     
     //CRC (Usually ignored...)
-    SPI1_sendByte(0xFF);
-    SPI1_sendByte(0xFF);
+    SPI1_sendByte(((chkSum >> 8) & 0xFF));
+    SPI1_sendByte(chkSum & 0xFF);
     
     //Receive Data Response
     RespToken eToken;
@@ -758,17 +784,20 @@ CommandError memCard_writeBlock(void)
     //Wait for busy to clear...
     //Active LOW
     
-    uint8_t resp = 0xFF;
-    while (resp != 0xFF)
+    uint8_t resp;
+    do 
     {
         resp = SPI1_exchangeByte(0xFF);
-    }
+    }while (resp == 0x00);
     
     CARD_CS_SetHigh();
     
 #ifdef MEM_CARD_DEBUG_ENABLE
     printf("[DEBUG] Busy bit has cleared - write done!\r\n");
 #endif
+    
+    writeSize = WRITE_SIZE_INVALID;
+    cacheBlockAddr = 0xFFFFFFFF;
     
     return CARD_NO_ERROR;
 }
@@ -792,7 +821,7 @@ CommandError memCard_readBlock(uint32_t blockAddr)
     if (blockAddr == cacheBlockAddr)
     {
 #ifdef MEM_CARD_DEBUG_ENABLE
-    printf("[DEBUG FILE I/O] Sector %d fetch skipped due to cache\r\n");
+    printf("[DEBUG FILE I/O] Sector %d fetch skipped due to cache\r\n", blockAddr);
 #endif
         return CARD_NO_ERROR;
     }

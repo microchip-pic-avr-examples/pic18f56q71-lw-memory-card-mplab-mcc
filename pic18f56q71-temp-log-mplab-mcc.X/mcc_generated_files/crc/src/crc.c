@@ -44,8 +44,8 @@ void CRC_Initialize(void)
 {
     CRCCON0 = 0x00;
     //CRC Configurations
-    //CRCPLEN 7; 
-    CRCCON1 = 0x7;
+    //CRCPLEN 15; 
+    CRCCON1 = 0xF;
     //CRCDLEN 7; 
     CRCCON2 = 0x7;
 
@@ -55,10 +55,10 @@ void CRC_Initialize(void)
     CRCXORT = 0x0;
     //CRCXORU 0; 
     CRCXORU = 0x0;
-    //CRCXORH 0; 
-    CRCXORH = 0x0;
-    //CRCXORL 213; 
-    CRCXORL = 0xD5;
+    //CRCXORH 16; 
+    CRCXORH = 0x10;
+    //CRCXORL 33; 
+    CRCXORL = 0x21;
 
     // Read/Write access to CRCOUT
     CRCCON0bits.SETUP = 0b00;
@@ -168,7 +168,7 @@ uint32_t CRC_GetCalculatedResult(bool reverse, uint32_t xorValue)
         result = CRC_ReverseValue(result);
     }
     result ^= xorValue;
-    return (result & 0xFF);
+    return (result & 0xFFFF);
 }
 
 inline bool CRC_IsCrcBusy(void)
