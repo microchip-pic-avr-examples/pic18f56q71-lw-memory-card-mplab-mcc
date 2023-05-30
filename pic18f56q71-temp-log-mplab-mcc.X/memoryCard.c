@@ -716,8 +716,8 @@ CommandError memCard_writeBlock(void)
     SPI1_sendBytes(&cmdData[0], 6);
     
     //Get the Response
-    uint8_t header;
-    if (!memCard_receiveResponse_R1(&header))
+    CommandStatus header;
+    if (!memCard_receiveResponse_R1(&header.data))
     {
         CARD_CS_SetHigh();
 #ifdef MEM_CARD_DEBUG_ENABLE
@@ -725,6 +725,15 @@ CommandError memCard_writeBlock(void)
 #endif
 
         return CARD_SPI_TIMEOUT;
+    }
+    
+    if (header.data != 0x00)
+    {
+        CARD_CS_SetHigh();
+#ifdef MEM_CARD_DEBUG_ENABLE
+    printf("[ERROR] Command response error\r\n");
+#endif
+        return CARD_RESPONSE_ERROR;
     }
     
     //Padding Byte
