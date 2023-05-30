@@ -61,6 +61,16 @@ void onCardChange(void)
     }
 }
 
+uint16_t getStringLength(const char* str)
+{
+    uint16_t count = 0;
+    while (str[count] != '\0') { count++; }
+    
+    //Add an extra position to account for '\0'
+    count++;
+    return count;
+}
+
 void readFile(void)
 {
     FRESULT result;
@@ -93,8 +103,7 @@ void writeFile(void)
 {
     FRESULT result;
     const char* filename = WRITE_FILENAME;
-    const char* testWrite = "New data";
-    const unsigned int wLen = 8;
+    const char* testWrite = "New data - 1234567890";
     
     unsigned int bwLen = 0;
 
@@ -108,7 +117,7 @@ void writeFile(void)
         result = pf_lseek(0);
         if (result == FR_OK)
         {
-            result = pf_write(&testWrite[0], wLen, &bwLen);
+            result = pf_write(&testWrite[0], getStringLength(testWrite), &bwLen);
             if (result == FR_OK)
             {
                 result = pf_write(0,0, &bwLen);
@@ -166,7 +175,6 @@ int main(void)
     
     FATFS fs;
     
-   
     FRESULT mntResult;
     
     while(1)

@@ -27,6 +27,10 @@ void memCard_initDriver(void)
     {
         cardStatus = STATUS_CARD_NOT_INIT;
     }
+    else
+    {
+        cardStatus = STATUS_CARD_NONE;
+    }
 }
 
 //Configure the Memory Card
