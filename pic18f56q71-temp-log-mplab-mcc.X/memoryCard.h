@@ -14,6 +14,9 @@ extern "C" {
 //If defined, all commands are printed to terminal
 #define MEM_CARD_DEBUG_ENABLE
     
+//If defined, all copied bytes (from READ DISK) are printed
+//#define MEM_CARD_MEMORY_DEBUG_ENABLE
+    
 //Macro for card insert / detect
 #define IS_CARD_ATTACHED() (!CLC2_OutputStatusGet())
     
@@ -21,10 +24,10 @@ extern "C" {
 #define R1_TIMEOUT_BYTES 10
     
 //Number of bytes to wait for data response
-#define READ_TIMEOUT_BYTES 10
+#define READ_TIMEOUT_BYTES 30
     
-//Number of bytes to wait for the memroy card to respond to a write
-#define WRITE_TIMEOUT_BYTES 10
+//Number of bytes to wait for the memory card to respond to a write
+#define WRITE_TIMEOUT_BYTES 30
     
 //How many times will the driver attempt to init the Card (ACMD41 / CMD1)
 #define INIT_RETRIES 100

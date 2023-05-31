@@ -46,7 +46,7 @@
 
 //#define UNIT_TEST_ENABLE
 
-#define READ_FILENAME "test_r.txt"
+#define READ_FILENAME "test_w.txt"
 #define WRITE_FILENAME "test_w.txt"
 
 void onCardChange(void)
@@ -103,7 +103,7 @@ void writeFile(void)
 {
     FRESULT result;
     const char* filename = WRITE_FILENAME;
-    const char* testWrite = "New data - 1234567890";
+    const char* testWrite = "New Data - 1234567890\r\nABCDEFGHIJKLMNOPQRSTUVWXYZ";
     
     unsigned int bwLen = 0;
 

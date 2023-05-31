@@ -196,7 +196,7 @@ bool memCard_initCard(void)
         printf("Memory card - READY\r\n");
         
         //Set SPI Frequency
-        if (memCard_setupFastSPI())
+        if (!memCard_setupFastSPI())
         {
             printf("[WARN] Unable to change SPI clock speeds\r\n");
         }
@@ -569,6 +569,10 @@ bool memCard_readFromDisk(uint32_t sect, uint16_t offset, uint8_t* data, uint16_
     if (cardStatus != STATUS_CARD_READY)
         return false;
     
+#ifdef MEM_CARD_DEBUG_ENABLE
+    printf("[DEBUG FILE I/O] Requesting: Sector %lu at offset %u for %u bytes\r\n", sect, offset, nBytes);
+#endif
+    
     if (sect != cacheBlockAddr)
     {
         //Sector not loaded, need to read the value...
@@ -580,7 +584,7 @@ bool memCard_readFromDisk(uint32_t sect, uint16_t offset, uint8_t* data, uint16_
 #ifdef MEM_CARD_DEBUG_ENABLE
     else
     {
-        printf("[DEBUG FILE I/O] Cache Hit for Sector %d\r\n", sect);
+        printf("[DEBUG FILE I/O] Sector cache hit\r\n");
     }
 #endif
     
@@ -597,9 +601,16 @@ bool memCard_readFromDisk(uint32_t sect, uint16_t offset, uint8_t* data, uint16_
             }
             cachePos = 0;
         }
+#ifdef MEM_CARD_MEMORY_DEBUG_ENABLE
+        printf("%x%x ", (cache[cachePos] & 0xF0) >> 4, cache[cachePos] & 0x0F);
+#endif
         data[index] = cache[cachePos];
         cachePos++;
     }
+    
+#ifdef MEM_CARD_MEMORY_DEBUG_ENABLE
+            printf("\r\n");
+#endif
     
     return true;
 }
@@ -614,7 +625,7 @@ bool memCard_prepareWrite(uint32_t sector)
     }
     
 #ifdef MEM_CARD_DEBUG_ENABLE
-    printf("[DEBUG FILE I/O] Preparing for write on sector %d\r\n", sector);
+    printf("[DEBUG FILE I/O] Preparing for write on sector %lu\r\n", sector);
 #endif
     
     //Set the target
@@ -657,7 +668,7 @@ bool memCard_queueWrite(uint8_t* data, uint16_t dLen)
     }
     
 #ifdef MEM_CARD_DEBUG_ENABLE
-    printf("[DEBUG FILE I/O] Queued %d bytes for write\r\n", count);
+    printf("[DEBUG FILE I/O] Queued %u bytes for write\r\n", count);
 #endif
     
     if (count != dLen)
@@ -683,7 +694,7 @@ CommandError memCard_writeBlock(void)
     }
     
 #ifdef MEM_CARD_DEBUG_ENABLE
-    printf("[DEBUG FILE I/O] Writing %d bytes to sector %d \r\n", writeSize, cacheBlockAddr);
+    printf("[DEBUG FILE I/O] Writing %u bytes to sector %lu \r\n", writeSize, cacheBlockAddr);
 #endif
     
     uint32_t compBlockAddr = cacheBlockAddr;
@@ -692,7 +703,6 @@ CommandError memCard_writeBlock(void)
         //Shift by 9 bits (512) to convert block to byte addressing
         compBlockAddr <<= FAT_BLOCK_SHIFT;
     }
-
     
     //Send CMD24
     uint8_t cmdData[6];
@@ -842,13 +852,13 @@ CommandError memCard_readBlock(uint32_t blockAddr)
     if (blockAddr == cacheBlockAddr)
     {
 #ifdef MEM_CARD_DEBUG_ENABLE
-    printf("[DEBUG FILE I/O] Sector %d fetch skipped due to cache\r\n", blockAddr);
+    printf("[DEBUG FILE I/O] Sector %lu fetch skipped due to cache\r\n", blockAddr);
 #endif
         return CARD_NO_ERROR;
     }
     
 #ifdef MEM_CARD_DEBUG_ENABLE
-    printf("[DEBUG FILE I/O] Fetching Sector %d\r\n", blockAddr);
+    printf("[DEBUG FILE I/O] Fetching Sector %lu\r\n", blockAddr);
 #endif
     
     uint32_t compBlockAddr = blockAddr;
@@ -903,8 +913,10 @@ CommandError memCard_readBlock(uint32_t blockAddr)
         
         return CARD_RESPONSE_ERROR;
     }
-
+    
+    //Receive data
     CommandError err = memCard_receiveBlockData(&cache[0], FAT_BLOCK_SIZE);
+        
     CARD_CS_SetHigh();
     
     //Update Cache Address
@@ -917,13 +929,34 @@ CommandError memCard_readBlock(uint32_t blockAddr)
 CommandError memCard_receiveBlockData(uint8_t* data, uint16_t length)
 {
     //Data Header
-    uint8_t count = 0;
-    data[0] = 0xFF;
-    
-    while ((count < READ_TIMEOUT_BYTES) && (data[0] == 0xFF))
+    RespToken eToken;
+    eToken.data = 0xFF;
+    uint8_t rCount = 0;
+    bool good = false;
+
+    do 
     {
-        data[0] = SPI1_exchangeByte(0xFF);
-        count++;
+        eToken.data = SPI1_exchangeByte(0xFF);
+        
+        //Valid header!
+        if (eToken.data != 0xFF)
+        {
+            good = true;
+        }
+        
+        rCount++;
+    } while ((rCount < READ_TIMEOUT_BYTES) && (!good));
+    
+        
+    if (rCount >= READ_TIMEOUT_BYTES)
+    {
+        return CARD_SPI_TIMEOUT;
+    }
+    
+    if (eToken.data != 0xFE)
+    {
+        //Error returned!
+        return CARD_RESPONSE_ERROR;
     }
     
     //Receive Data
