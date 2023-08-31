@@ -15,6 +15,18 @@ static volatile uint8_t cache[512];
 static uint32_t cacheBlockAddr;
 
 static uint16_t writeSize;
+static bool speedSwitchOK = false;
+static uint8_t fastBaud = SPI_400KHZ_BAUD;
+
+void memCard_printData(uint8_t* data, uint8_t size)
+{
+    for (uint8_t index = 0; index < size; ++index)
+    {
+        printf("%x%x ", (data[index] & 0xF0) >> 4, data[index] & 0x0F);
+    }
+    
+    printf("\r\n");
+}
 
 //Init the Memory Card Driver
 void memCard_initDriver(void)
@@ -37,6 +49,12 @@ void memCard_initDriver(void)
 //Must be called whenever a card is inserted
 bool memCard_initCard(void)
 {
+    //If already initialized, skip this step
+    if (cardStatus == STATUS_CARD_READY)
+    {
+        return true;
+    }
+    
     printf("Beginning memory card configuration...\r\n");
         
     //Invalidate the Cache
@@ -111,15 +129,22 @@ bool memCard_initCard(void)
             continue;
         }    
 
-        //Check for High Capacity Support
-        //CMD58
-        CardCapacityType memCapacity = CCS_INVALID;
-        memCapacity = memCard_getCapacityType();
-
-        if (memCapacity == CCS_INVALID)
-        {
-            printf("[WARN] CMD58 was unable to determine capacity support\r\n");
-        }
+//        //Check for High Capacity Support
+//        //CMD58
+//        CardCapacityType memCapacity = CCS_INVALID;
+//        memCapacity = memCard_getCapacityType();
+//        
+//        switch (memCapacity)
+//        {
+//            case CCS_LOW_CAPACITY:
+//                printf("Memory Card is small - use byte-mode addressing\r\n");
+//                break;
+//            case CCS_HIGH_CAPACITY:
+//                printf("Memory Card is large - use LBA accessing\r\n");
+//                break;
+//            default:
+//                printf("[WARN] CMD58 was unable to determine capacity support\r\n");
+//        }
         
         uint8_t count = 1;
         uint32_t initParam = 0x40000000;
@@ -179,27 +204,44 @@ bool memCard_initCard(void)
             //Something went wrong!
             continue;
         }
-
+        
         //Set Block Size to 512B
         //CMD16
-        if (memCapacity != CCS_HIGH_CAPACITY)
+        status.data = memCard_sendCMD_R1(16, FAT_BLOCK_SIZE);
+        if (status.data != HEADER_NO_ERROR)
         {
-            status.data = memCard_sendCMD_R1(16, FAT_BLOCK_SIZE);
-            if (status.data != HEADER_NO_ERROR)
-            {
-                printf("[WARN] Unable to set BLOCK SIZE\r\n");
-            }
+            printf("[WARN] Unable to set BLOCK SIZE\r\n");
         }
         
         //Card is now usable for memory operations
         cardStatus = STATUS_CARD_READY;
         printf("Memory card - READY\r\n");
         
+        //Check for High Capacity Support
+        //CMD58
+        CardCapacityType memCapacity = CCS_INVALID;
+        memCapacity = memCard_getCapacityType();
+        
+        switch (memCapacity)
+        {
+            case CCS_LOW_CAPACITY:
+                printf("Memory Card is small - use byte-mode addressing\r\n");
+                break;
+            case CCS_HIGH_CAPACITY:
+                printf("Memory Card is large - use LBA accessing\r\n");
+                break;
+            default:
+                printf("[WARN] CMD58 was unable to determine capacity support\r\n");
+        }
+
+        
+#ifndef DISABLE_SPEED_SWITCH
         //Set SPI Frequency
         if (!memCard_setupFastSPI())
         {
             printf("[WARN] Unable to change SPI clock speeds\r\n");
         }
+#endif
         
         //Load Block 0 into the cache
         memCard_readBlock(0x00);
@@ -228,14 +270,116 @@ bool memCard_isCardReady(void)
 bool memCard_setupFastSPI(void)
 {
     uint8_t resp[16];
+    fastBaud = SPI_400KHZ_BAUD;
     
     //Read the CSD register
-    if (!memCard_readCSD(&resp[0]))
+    if (memCard_readCSD(&resp[0]) != CARD_NO_ERROR)
     {
         return false;
     }
     
-    return false;
+    uint8_t tSpeed = resp[3];
+    
+#ifdef MEM_CARD_DEBUG_ENABLE
+    printf("[DEBUG] Transfer Speed Byte = 0x%x\r\n", tSpeed);
+#endif
+    
+    //Byte 4 contains transfer speed
+    //2:0 - Transfer unit
+    //6:3 - Multiplier
+    //7 - Reserved
+    uint8_t tUnit = tSpeed & 0x07;
+    
+    uint8_t multRef = (tSpeed & 0x78) >> 3;
+    if (multRef == 0)
+    {
+        return false;
+    }
+    
+    
+    
+    if (tUnit > 2)
+    {
+        //MCU limits the speed, so go-to max speed
+        fastBaud = (SPI_10_6MHZ_BAUD);
+    }
+    else if (tUnit == 2)
+    {
+        //10 MHz base   
+        if (multRef >= 2)
+        {
+            //Multiplier > 1.1
+            fastBaud = (SPI_10_6MHZ_BAUD);
+        }
+        else
+        {
+            fastBaud = (SPI_8_MHZ_BAUD);
+        }
+    }
+    else if (tUnit == 1)
+    {
+        //1 MHz base
+        if (multRef == 0x0F)
+        {
+            fastBaud = (SPI_8_MHZ_BAUD);
+        }
+        else if (multRef == 0x0E)
+        {
+            fastBaud = (SPI_6_4MHZ_BAUD);
+        }
+        else if (multRef >= 9)
+        {
+            fastBaud = (SPI_4MHZ_BAUD);
+        }
+        else if (multRef == 8)
+        {
+            fastBaud = (SPI_3_2MHZ_BAUD);
+        }
+        else if (multRef >= 5)
+        {
+            fastBaud = (SPI_2MHZ_BAUD);
+        }
+        else
+        {
+            fastBaud = (SPI_1MHZ_BAUD);
+        }
+    }
+    else
+    {
+        //100 kHz base timing - not worth switching
+        return false;
+    }
+    
+    speedSwitchOK = true;
+    
+    printf("Enabling SPI CLK Switch to ");    
+    
+    switch(fastBaud)
+    {
+        case SPI_10_6MHZ_BAUD:
+            printf("10.6 MHz\r\n");
+            break;
+        case SPI_8_MHZ_BAUD:
+            printf("8 MHz\r\n");
+            break;
+        case SPI_6_4MHZ_BAUD:
+            printf("6.4 MHz\r\n");
+            break;
+        case SPI_4MHZ_BAUD:
+            printf("4 MHz\r\n");
+            break;
+        case SPI_3_2MHZ_BAUD:
+            printf("3.2 MHz\r\n");
+            break;
+        case SPI_2MHZ_BAUD:
+            printf("2 MHz\r\n");
+            break;
+        case SPI_1MHZ_BAUD:
+            printf("1 MHz\r\n");
+            break;
+    }
+    
+    return true;
 }
 
 //Calculates the checksum for a block of data
@@ -430,7 +574,7 @@ CardCapacityType memCard_getCapacityType(void)
     SPI1_sendByte(0xFF);
     
     uint8_t memPoolTx[6];
-    uint8_t memPoolRx[6];
+    uint8_t memPoolRx[4];
     
     //Prepare Command Header
     //0x40 - Fixed + CMD58
@@ -463,7 +607,7 @@ CardCapacityType memCard_getCapacityType(void)
         return CCS_INVALID;
     }
     
-    if (stat.data != HEADER_IDLE)
+    if (stat.data != HEADER_NO_ERROR)
     {
         //Something went wrong
         CARD_CS_SetHigh();
@@ -481,6 +625,11 @@ CardCapacityType memCard_getCapacityType(void)
     SPI1_exchangeBytes(&memPoolTx[0], &memPoolRx[0], 4);
     CARD_CS_SetHigh();
 
+#ifdef MEM_CARD_DEBUG_ENABLE
+    printf("[DEBUG] Printing OCR Register\r\n");
+    memCard_printData(&memPoolRx[0], 4);
+#endif
+    
     //OCR is bit 30 from the return
     return ((memPoolRx[0] & 0x40) != 0x00) ? CCS_HIGH_CAPACITY : CCS_LOW_CAPACITY;
 }
@@ -559,6 +708,11 @@ CommandError memCard_readCSD(uint8_t* data)
     CommandError cmdError = memCard_receiveBlockData(&data[0], 16);    
     CARD_CS_SetHigh();
     
+#ifdef MEM_CARD_DEBUG_ENABLE
+    printf("[DEBUG] Printing CSD Register\r\n");
+    memCard_printData(&data[0], 16);
+#endif
+    
     return cmdError;
 }
 
@@ -573,6 +727,15 @@ bool memCard_readFromDisk(uint32_t sect, uint16_t offset, uint8_t* data, uint16_
     printf("[DEBUG FILE I/O] Requesting: Sector %lu at offset %u for %u bytes\r\n", sect, offset, nBytes);
 #endif
     
+#ifdef MEM_CARD_DISABLE_CACHE
+    if (true)
+    {
+        if (memCard_readBlock(sect) != CARD_NO_ERROR)
+        {
+            return false;
+        }
+    }
+#else
     if (sect != cacheBlockAddr)
     {
         //Sector not loaded, need to read the value...
@@ -581,6 +744,7 @@ bool memCard_readFromDisk(uint32_t sect, uint16_t offset, uint8_t* data, uint16_
             return false;
         }
     }
+#endif
 #ifdef MEM_CARD_DEBUG_ENABLE
     else
     {
@@ -746,6 +910,14 @@ CommandError memCard_writeBlock(void)
         return CARD_RESPONSE_ERROR;
     }
     
+    //Clock Speed Switching
+#ifndef DISABLE_SPEED_SWITCH
+    if (speedSwitchOK)
+    {
+        SPI1_setSpeed(fastBaud);
+    }
+#endif
+    
     //Padding Byte
     //Do we need this?
     //SPI1_sendByte(0xFF);
@@ -768,6 +940,10 @@ CommandError memCard_writeBlock(void)
     RespToken eToken;
     uint8_t rCount = 0;
     bool good = false;
+    
+    //Return to 400 kHz base
+    SPI1_setSpeed(SPI_400KHZ_BAUD);
+    
     do 
     {
         eToken.data = SPI1_exchangeByte(0xFF);
@@ -849,6 +1025,7 @@ CommandError memCard_readBlock(uint32_t blockAddr)
         return CARD_WRITE_IN_PROGRESS;
     }
     
+#ifndef MEM_CARD_DISABLE_CACHE
     if (blockAddr == cacheBlockAddr)
     {
 #ifdef MEM_CARD_DEBUG_ENABLE
@@ -856,6 +1033,7 @@ CommandError memCard_readBlock(uint32_t blockAddr)
 #endif
         return CARD_NO_ERROR;
     }
+#endif
     
 #ifdef MEM_CARD_DEBUG_ENABLE
     printf("[DEBUG FILE I/O] Fetching Sector %lu\r\n", blockAddr);
@@ -927,7 +1105,7 @@ CommandError memCard_readBlock(uint32_t blockAddr)
 
 //Receives length bytes of data. Does not transmit the command
 CommandError memCard_receiveBlockData(uint8_t* data, uint16_t length)
-{
+{    
     //Data Header
     RespToken eToken;
     eToken.data = 0xFF;
@@ -947,7 +1125,6 @@ CommandError memCard_receiveBlockData(uint8_t* data, uint16_t length)
         rCount++;
     } while ((rCount < READ_TIMEOUT_BYTES) && (!good));
     
-        
     if (rCount >= READ_TIMEOUT_BYTES)
     {
         return CARD_SPI_TIMEOUT;
@@ -958,6 +1135,14 @@ CommandError memCard_receiveBlockData(uint8_t* data, uint16_t length)
         //Error returned!
         return CARD_RESPONSE_ERROR;
     }
+    
+    //Clock Speed Switching
+#ifndef DISABLE_SPEED_SWITCH
+    if (speedSwitchOK)
+    {
+        SPI1_setSpeed(fastBaud);
+    }
+#endif
     
     //Receive Data
     SPI1_receiveBytesTransmitFF(&data[0], length);
@@ -973,7 +1158,7 @@ CommandError memCard_receiveBlockData(uint8_t* data, uint16_t length)
     //0x1021
     
     //TODO: Verify the Checksum
-    
+    SPI1_setSpeed(SPI_400KHZ_BAUD);
     return CARD_NO_ERROR;
 }
 

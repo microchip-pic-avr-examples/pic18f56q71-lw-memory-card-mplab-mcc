@@ -11,11 +11,15 @@ extern "C" {
 #include "mcc_generated_files/system/pins.h"
 #include "mcc_generated_files/clc/clc2.h"
 
-//If defined, all commands are printed to terminal
+//If defined, all memory card commands are printed to terminal
 #define MEM_CARD_DEBUG_ENABLE
     
 //If defined, all copied bytes (from READ DISK) are printed
 //#define MEM_CARD_MEMORY_DEBUG_ENABLE
+    
+//If defined, no cache is used (ie: the card is accessed EVERY time)
+//Extremely slow. Used for debugging only
+//#define MEM_CARD_DISABLE_CACHE
     
 //Macro for card insert / detect
 #define IS_CARD_ATTACHED() (!CLC2_OutputStatusGet())
@@ -38,6 +42,9 @@ extern "C" {
 //Check Pattern during configuration (Can be any value)
 #define CHECK_PATTERN 0xA5
     
+//If set, the SPI is kept at 400 kHz for all communication
+//#define DISABLE_SPEED_SWITCH 
+    
 //Set VDD for 2.7V to 3.6V Operation
 #define VHS_3V3 0b0001
     
@@ -51,8 +58,14 @@ extern "C" {
 #define HEADER_INVALID 0xFF
     
 //SPI Baud Rates (Assume SPI Base = 64 MHz)
-#define SPI_400KHZ_BAUD 79
 #define SPI_10_6MHZ_BAUD 2
+#define SPI_8_MHZ_BAUD 3
+#define SPI_6_4MHZ_BAUD 4
+#define SPI_4MHZ_BAUD 7
+#define SPI_3_2MHZ_BAUD 9
+#define SPI_2MHZ_BAUD 15
+#define SPI_1MHZ_BAUD 31
+#define SPI_400KHZ_BAUD 79
     
 //Bad OCR return value
 #define CARD_BAD_OCR 0xFFFFFFFF
@@ -126,7 +139,7 @@ extern "C" {
         uint8_t data[2];
         uint16_t packet;
     } CardStatus;
-    
+       
     typedef enum {
         CARD_NO_ERROR = 0, CARD_SPI_TIMEOUT, CARD_CRC_ERROR, CARD_RESPONSE_ERROR,
         CARD_ILLEGAL_CMD, CARD_VOLTAGE_NOT_SUPPORTED, CARD_PATTERN_ERROR, 

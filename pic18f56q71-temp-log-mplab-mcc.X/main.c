@@ -46,7 +46,7 @@
 
 //#define UNIT_TEST_ENABLE
 
-#define READ_FILENAME "test_w.txt"
+#define READ_FILENAME "test_r.txt"
 #define WRITE_FILENAME "test_w.txt"
 
 void onCardChange(void)
@@ -94,8 +94,12 @@ void readFile(void)
         }
         else
         {
-            printf("[ERROR] Failed to open file\r\n");
+            printf("[ERROR] Failed to read file\r\n");
         }
+    }
+    else
+    {
+        printf("[ERROR] Could not open file %s\r\n", filename);
     }
 }
 
