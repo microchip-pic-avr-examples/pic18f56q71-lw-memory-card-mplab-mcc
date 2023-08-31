@@ -205,6 +205,11 @@ bool memCard_initCard(void)
             continue;
         }
         
+        //Check for High Capacity Support
+        //CMD58
+        CardCapacityType memCapacity = CCS_INVALID;
+        memCapacity = memCard_getCapacityType();
+        
         //Set Block Size to 512B
         //CMD16
         status.data = memCard_sendCMD_R1(16, FAT_BLOCK_SIZE);
@@ -217,10 +222,6 @@ bool memCard_initCard(void)
         cardStatus = STATUS_CARD_READY;
         printf("Memory card - READY\r\n");
         
-        //Check for High Capacity Support
-        //CMD58
-        CardCapacityType memCapacity = CCS_INVALID;
-        memCapacity = memCard_getCapacityType();
         
         switch (memCapacity)
         {
@@ -578,7 +579,7 @@ CardCapacityType memCard_getCapacityType(void)
     
     //Prepare Command Header
     //0x40 - Fixed + CMD58
-    memPoolTx[0] = 0x40 | 8;
+    memPoolTx[0] = 0x40 | 58;
     
 #ifdef MEM_CARD_DEBUG_ENABLE
     printf(DEBUG_STRING, 58);
