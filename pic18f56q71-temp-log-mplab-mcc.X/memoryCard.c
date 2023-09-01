@@ -128,23 +128,6 @@ bool memCard_initCard(void)
             printf(" )\r\n");
             continue;
         }    
-
-//        //Check for High Capacity Support
-//        //CMD58
-//        CardCapacityType memCapacity = CCS_INVALID;
-//        memCapacity = memCard_getCapacityType();
-//        
-//        switch (memCapacity)
-//        {
-//            case CCS_LOW_CAPACITY:
-//                printf("Memory Card is small - use byte-mode addressing\r\n");
-//                break;
-//            case CCS_HIGH_CAPACITY:
-//                printf("Memory Card is large - use LBA accessing\r\n");
-//                break;
-//            default:
-//                printf("[WARN] CMD58 was unable to determine capacity support\r\n");
-//        }
         
         uint8_t count = 1;
         uint32_t initParam = 0x40000000;
@@ -210,6 +193,18 @@ bool memCard_initCard(void)
         CardCapacityType memCapacity = CCS_INVALID;
         memCapacity = memCard_getCapacityType();
         
+        switch (memCapacity)
+        {
+            case CCS_LOW_CAPACITY:
+                printf("Memory Card is small - use byte-mode addressing\r\n");
+                break;
+            case CCS_HIGH_CAPACITY:
+                printf("Memory Card is large - use LBA addressing\r\n");
+                break;
+            default:
+                printf("[WARN] CMD58 was unable to determine capacity support\r\n");
+        }
+        
         //Set Block Size to 512B
         //CMD16
         status.data = memCard_sendCMD_R1(16, FAT_BLOCK_SIZE);
@@ -221,20 +216,6 @@ bool memCard_initCard(void)
         //Card is now usable for memory operations
         cardStatus = STATUS_CARD_READY;
         printf("Memory card - READY\r\n");
-        
-        
-        switch (memCapacity)
-        {
-            case CCS_LOW_CAPACITY:
-                printf("Memory Card is small - use byte-mode addressing\r\n");
-                break;
-            case CCS_HIGH_CAPACITY:
-                printf("Memory Card is large - use LBA accessing\r\n");
-                break;
-            default:
-                printf("[WARN] CMD58 was unable to determine capacity support\r\n");
-        }
-
         
 #ifndef DISABLE_SPEED_SWITCH
         //Set SPI Frequency

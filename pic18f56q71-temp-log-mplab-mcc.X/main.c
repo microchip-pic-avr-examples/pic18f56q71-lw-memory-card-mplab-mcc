@@ -46,9 +46,6 @@
 
 //#define UNIT_TEST_ENABLE
 
-#define READ_FILENAME "test_r.txt"
-#define WRITE_FILENAME "test_w.txt"
-
 void onCardChange(void)
 {
     if (IS_CARD_ATTACHED())
@@ -71,22 +68,24 @@ uint16_t getStringLength(const char* str)
     return count;
 }
 
-void readFile(void)
+void modifyFile(const char* filename)
 {
     FRESULT result;
     unsigned int rxLen = 0;
     char rxBuffer[127];
-    const char* filename = READ_FILENAME;
+    
+    const char* newMessage = "Hello from PIC18F56Q71";
+    unsigned int bwLen = 0;
     
     printf("Reading file \"%s\"\r\n", filename);
     
     //Open a file
     result = pf_open(filename);
-#ifdef MEM_CARD_DEBUG_ENABLE
-    printf("[DEBUG] pf_open = %d\r\n", result);
-#endif
     if (result == FR_OK)
     {
+        //File opened OK
+        
+        //Read the original Message
         if (pf_read(&rxBuffer[0], 126, &rxLen) == FR_OK)
         {
             rxBuffer[rxLen] = '\0';
@@ -95,60 +94,62 @@ void readFile(void)
         else
         {
             printf("[ERROR] Failed to read file\r\n");
+            return;
         }
-    }
-    else
-    {
-        printf("[ERROR] Could not open file %s\r\n", filename);
-    }
-}
-
-void writeFile(void)
-{
-    FRESULT result;
-    const char* filename = WRITE_FILENAME;
-    const char* testWrite = "New Data - 1234567890\r\nABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    
-    unsigned int bwLen = 0;
-
-    printf("Overwriting file \"%s\"\r\n", filename);
-    result = pf_open(filename);
-#ifdef MEM_CARD_DEBUG_ENABLE
-    printf("[DEBUG] pf_open = %d\r\n", result);
-#endif
-    if (result == FR_OK)
-    {
-        result = pf_lseek(0);
+        
+        //Overwrite the original message
+        //First queue the new text
+        result = pf_write(&newMessage[0], getStringLength(newMessage), &bwLen);
         if (result == FR_OK)
         {
-            result = pf_write(&testWrite[0], getStringLength(testWrite), &bwLen);
+            //Then, commit it to the card
+            result = pf_write(0,0, &bwLen);
             if (result == FR_OK)
             {
-                result = pf_write(0,0, &bwLen);
-                if (result == FR_OK)
-                {
-                    printf("Write success!\r\n");
-                }
-                else
-                {
-                    printf("[ERROR] Failed to finalize write\r\n");
-                }
+                printf("File was successfully modified\r\n");
             }
             else
             {
-                printf("[ERROR] Failed to load write data\r\n");
+                printf("[ERROR] Failed to write file\r\n");
+                return;
             }
         }
         else
         {
-            printf("[ERROR] Failed to seek file\r\n");
+            printf("[ERROR] Failed to queue write data\r\n");
+            return;
         }
-    }                    
+        
+        //Move read/write pointer
+        result = pf_lseek(0);
+        if (result == FR_OK)
+        {
+            printf("Returning to start of file\r\n");
+        }
+        else
+        {
+            printf("[ERROR] Failed to seek file\r\n");
+            return;
+        }
+        
+        //Read the new message
+        if (pf_read(&rxBuffer[0], 126, &rxLen) == FR_OK)
+        {
+            rxBuffer[rxLen] = '\0';
+            printf("Printing modified file \"%s\"\r\n> %s\r\n", filename, rxBuffer);
+        }
+        else
+        {
+            printf("[ERROR] Failed to read file\r\n");
+            return;
+        }
+    }
     else
     {
         printf("[ERROR] Could not open file %s\r\n", filename);
     }
 }
+
 
 int main(void)
 {
@@ -181,6 +182,8 @@ int main(void)
     
     FRESULT mntResult;
     
+    const char* testFile = "test.txt";
+    
     while(1)
     {
         if (memCard_getCardStatus() == STATUS_CARD_NOT_INIT)
@@ -206,9 +209,7 @@ int main(void)
                 }
                 else
                 {
-                    readFile();
-                    writeFile();
-                    readFile();
+                    modifyFile(testFile);
                 }
             }
             
