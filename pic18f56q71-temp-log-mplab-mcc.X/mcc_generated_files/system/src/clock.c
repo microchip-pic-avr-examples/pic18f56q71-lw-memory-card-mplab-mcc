@@ -51,6 +51,7 @@ void CLOCK_Initialize(void)
     ACTCON = 0x0;
     //FSCMFEV detected; FSCMFFI enabled; FSCMPEV detected; FSCMPFI enabled; FSCMSEV detected; FSCMSFI enabled; 
     FSCMCON = 0x0;
+
 }
 /**
  End of File

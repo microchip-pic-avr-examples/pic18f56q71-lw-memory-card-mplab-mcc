@@ -5,7 +5,7 @@
  * 
  * @ingroup delay
  * 
- * @brief This file contains the functions to generate delays in the millisecond and microsecond ranges as well as using timer ticks to indicate delay length.
+ * @brief This file contains functions to generate delays in the range of milliseconds and microseconds, using timer ticks to indicate delay length.
  *
  * @version DELAY Driver Version 1.1.0
 */

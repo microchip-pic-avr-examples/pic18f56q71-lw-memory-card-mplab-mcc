@@ -5,9 +5,9 @@
  * 
  * @defgroup systemdriver System Driver
  * 
- * @brief This is the generated header file for the System driver.
+ * * @brief This file contains the API prototype for the System Driver.
  *
- * @version Driver Version 1.0.1
+ * @version Driver Version 1.0.2
 */
 /*
 © [2023] Microchip Technology Inc. and its subsidiaries.
@@ -48,8 +48,7 @@
 
 /**
  * @ingroup systemdriver
- * @brief Initializes the system module.
- * This routine is called only once during system initialization, before calling other APIs.
+ * @brief Initializes the system module. This is called only once before calling other APIs.
  * @param None.
  * @return None.
 */

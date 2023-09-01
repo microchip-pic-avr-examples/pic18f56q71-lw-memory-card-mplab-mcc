@@ -7,7 +7,7 @@
  * 
  * @brief This file contains the API implementation for the System driver.
  *
- * @version Driver Version 1.0.1
+ * @version Driver Version 1.0.2
 */
 /*
 © [2023] Microchip Technology Inc. and its subsidiaries.

@@ -118,10 +118,10 @@ void UART2_Initialize(void)
     //BRGH 0; 
     U2BRGH = 0x0; 
     //TXBE empty; STPMD in middle of first Stop bit; TXWRE No error; 
-    U2FIFO = 0x20; 
+    U2FIFO = 0x2E; 
     //ABDIE disabled; ABDIF Auto-baud not enabled or not complete; WUIF WUE not enabled by software; 
     U2UIR = 0x0; 
-    //TXCIF equal; RXFOIF not overflowed; RXBKIF No Break detected; FERIF no error; CERIF No Checksum error; ABDOVF Not overflowed; PERIF Byte not at top; TXMTIF empty; 
+    //TXCIF equal; RXFOIF not overflowed; RXBKIF No Break detected; FERIF no error; CERIF No Checksum error; ABDOVF Not overflowed; PERIF no parity error; TXMTIF empty; 
     U2ERRIR = 0x80; 
     //TXCIE disabled; RXFOIE disabled; RXBKIE disabled; FERIE disabled; CERIE disabled; ABDOVE disabled; PERIE disabled; TXMTIE disabled; 
     U2ERRIE = 0x0; 

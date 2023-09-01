@@ -5,7 +5,7 @@
  * 
  * @defgroup config_bitsdriver CONFIGBITS Driver 
  * 
- * @brief This is the generated header file for the Configuration bits driver.
+ * @brief This file contains the API prototype for the Configuration Bits driver.
  *
  * @version Driver Version 1.0.0
 */

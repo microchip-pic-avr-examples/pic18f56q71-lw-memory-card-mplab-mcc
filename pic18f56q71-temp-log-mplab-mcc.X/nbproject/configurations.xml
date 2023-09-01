@@ -60,9 +60,6 @@
             <itemPath>mcc_generated_files/crc/src/crc.c</itemPath>
           </logicalFolder>
         </logicalFolder>
-        <logicalFolder name="docs" displayName="docs" projectFiles="true">
-          <itemPath>mcc_generated_files/docs/delay.dox</itemPath>
-        </logicalFolder>
         <logicalFolder name="system" displayName="system" projectFiles="true">
           <logicalFolder name="src" displayName="src" projectFiles="true">
             <itemPath>mcc_generated_files/system/src/pins.c</itemPath>

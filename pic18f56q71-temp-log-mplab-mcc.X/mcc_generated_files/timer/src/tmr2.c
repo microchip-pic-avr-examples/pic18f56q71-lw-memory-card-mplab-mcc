@@ -7,7 +7,7 @@
  * 
  * @brief API implementations for the TMR2 module.
  *
- * @version TMR2 Driver Version 3.0.1
+ * @version TMR2 Driver Version 3.0.3
  */
 
 /*

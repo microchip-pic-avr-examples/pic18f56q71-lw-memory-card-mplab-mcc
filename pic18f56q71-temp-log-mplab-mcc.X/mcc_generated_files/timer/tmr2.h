@@ -7,7 +7,7 @@
  *
  * @brief This file contains the API Prototypes and other data types for the TMR2 driver.
  *
- * @version TMR2 Driver Version 3.0.1
+ * @version TMR2 Driver Version 3.0.3
  */
  
 

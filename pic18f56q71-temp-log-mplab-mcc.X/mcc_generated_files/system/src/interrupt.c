@@ -7,7 +7,7 @@
  * 
  * @brief This file contains the API implementation for the Interrupt Manager driver.
  * 
- * @version Interrupt Manager Driver Version 2.12
+ * @version Interrupt Manager Driver Version 2.1.3
 */
 
 /*
@@ -59,7 +59,6 @@ void  INTERRUPT_Initialize (void)
 
     GIE = state;
     // Assign peripheral interrupt priority vectors
-    IPR0bits.IOCIP = 1;
     IPR5bits.CLC2IP = 1;
 
     // Clear the interrupt flag
@@ -92,10 +91,6 @@ void __interrupt(irq(default),base(8)) Default_ISR()
 {
 }
 
-void __interrupt(irq(IOC), base(8)) IOC_ISR()
-{
-    PIN_MANAGER_IOC();
-}
 
 
 /**

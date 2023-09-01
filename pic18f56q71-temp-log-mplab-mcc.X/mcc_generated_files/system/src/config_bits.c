@@ -5,7 +5,7 @@
  * 
  * @ingroup config_bitsdriver
  * 
- * @brief This is the generated Device Configuration bits file.
+ * * @brief This file contains the API prototype for the System Driver.
  *
  * @version Driver Version 1.0.0
 */
