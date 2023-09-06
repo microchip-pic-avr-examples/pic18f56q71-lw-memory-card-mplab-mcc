@@ -178,6 +178,7 @@ int main(void)
 
     bool hasPrinted = false;
     
+    //Mounted Drive
     FATFS fs;
     
     FRESULT mntResult;
@@ -198,9 +199,6 @@ int main(void)
                 hasPrinted = true;
                 
                 mntResult = pf_mount(&fs);
-#ifdef MEM_CARD_DEBUG_ENABLE
-                printf("[DEBUG] pf_mount = %d\r\n", mntResult);
-#endif
                 
                 //Mount the drive
                 if (mntResult != 0x00)
@@ -209,6 +207,7 @@ int main(void)
                 }
                 else
                 {
+                    //Test pattern
                     modifyFile(testFile);
                 }
             }

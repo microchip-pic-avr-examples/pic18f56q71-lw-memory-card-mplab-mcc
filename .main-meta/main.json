@@ -24,7 +24,7 @@
         },
         "configurator": {
             "name": "MCC",
-            "semverRange": ""
+            "semverRange": ">=5.3.7"
         },
         "device": {
             "metaDataVersion": "1.0.0",
@@ -38,7 +38,9 @@
         },
         "author": "Robert Perkel",
         "peripherals": [ "SPI", "CLC1", "CLC2", "TMR2", "CRC", "UART2" ],
-        "keywords": [],
+        "keywords": [
+            "File System", "Memory", "Memory Module"
+        ],
         "additionalData": {
             "longDescription": {
                 "metaDataVersion": "1.0.0",

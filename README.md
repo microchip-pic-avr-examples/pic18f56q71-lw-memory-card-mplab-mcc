@@ -14,16 +14,16 @@
 
 ## Software Used
 
-- [MPLAB&reg; X IDE v6.1.5 or newer](#)
-- [MPLAB XC8 v2.45 or newer](#)
-- [MPLAB Code Configurator (MCC)](#)
+- [MPLAB&reg; X IDE v6.1.5 or newer](https://www.microchip.com/en-us/tools-resources/develop/mplab-x-ide?utm_source=GitHub&utm_medium=TextLink&utm_campaign=MCU8_MMTCha_pic18q71&utm_content=pic18f56q71-lw-memory-card-mplab-mcc&utm_bu=MCU08)
+- [MPLAB XC8 v2.45 or newer](https://www.microchip.com/en-us/tools-resources/develop/mplab-xc-compilers?utm_source=GitHub&utm_medium=TextLink&utm_campaign=MCU8_MMTCha_pic18q71&utm_content=pic18f56q71-lw-memory-card-mplab-mcc&utm_bu=MCU08)
+- [MPLAB Code Configurator (MCC)](https://www.microchip.com/en-us/tools-resources/configure/mplab-code-configurator?utm_source=GitHub&utm_medium=TextLink&utm_campaign=MCU8_MMTCha_pic18q71&utm_content=pic18f56q71-lw-memory-card-mplab-mcc&utm_bu=MCU08)
 - [PetiteFs R0.03a (Included in Project)](http://elm-chan.org/fsw/ff/00index_p.html)
 
 ## Hardware Used
 
-- [PIC18-Q71 Curiosity Development Kit](#)
-- [Nano Adapter](#)
-- [MicroSD Click&trade;](#)
+- [PIC18F56Q71  Curiosity Nano Evaluation Kit (EV01G21A)](https://www.microchip.com/en-us/development-tool/EV01G21A?utm_source=GitHub&utm_medium=TextLink&utm_campaign=MCU8_MMTCha_pic18q71&utm_content=pic18f56q71-lw-memory-card-mplab-mcc&utm_bu=MCU08)
+- [Curiosity Nano Base for Click Boards&trade;](https://www.microchip.com/en-us/development-tool/AC164162?utm_source=GitHub&utm_medium=TextLink&utm_campaign=MCU8_MMTCha_pic18q71&utm_content=pic18f56q71-lw-memory-card-mplab-mcc&utm_bu=MCU08)
+- [MicroSD Click (MIKROE-924)](https://www.mikroe.com/microsd-click)
 - [2GB Memory Card](https://www.amazon.com/Transcend-microSD-Without-Adapter-TS2GUSDC/dp/B001BNNZXO/)
 
 **Important: Memory Card must be 2 GB or less!**
@@ -32,7 +32,7 @@
 
 ### Hardware Setup
 
-With the power off, plug in the PIC18-Q71 Curiosity Nano into the adapter board. Put the MicroSD Click in slot 1.
+With the power off, plug in the Curiosity Nano into the adapter board. Put the MicroSD Click in slot 1.
 
 ### Memory Card Setup
 
@@ -48,10 +48,15 @@ A pre-formatted file is included inside the repository as well. **Important: Pet
 
 1. Plug-in the Curiosity Nano.
 2. Open MPLAB X IDE.
-3. Click on the MPLAB Data Visualizer button in the toolbar.
-4. On the COM port associated with the nano, press the gear symbol.
+3. Click on the MPLAB Data Visualizer button in the toolbar.  
+![Toolbar](./images/toolbar.png)
+4. On the COM port associated with the nano, press the gear symbol.  
+![COM Port](./images/comPort.png)
 5. Set the baud rate to 115,200.
 6. Click the terminal button to connect the COM port to the serial terminal.
+
+Data will print when a memory card is inserted, as shown below.  
+![Example Output](./images/exampleOutput.png)
 
 ## Implementing PetiteFs
 
@@ -61,17 +66,17 @@ PetiteFs handles file system management, but does not handle communication with 
 - `disk_readp`
 - `disk_writep`
 
-These functions communicate with the memory card API to perform file system tasks.
+These functions call the memory card API to perform file system tasks.
 
 **Important: This example has implemented these functions!**
 
 ## Operation
 
-When a memory card is inserted, a switch in the socket pulls a detection line low. The microcontroller debounces this signal, then sets a flag to initialize the memory card outside of the interrupt handler. When inserted, the card may fail to initialize, but the program will retry multiple times before erroring out. 
+When a memory card is inserted, a switch in the socket pulls a detection line low. The microcontroller debounces this signal, then sets a flag to initialize the memory card outside of the interrupt handler. When inserted, the card may fail to initialize due to powering on, but the program will retry multiple times before erroring out. 
 
 Communication with the memory card is via SPI. A series of commands are sent to the card to configure it for PetiteFs. For commands, the clock frequency is 400 kHz. During memory read/write, the clock frequency is increased up-to a maximum of 10.6 MHz, depending on the detected memory card support.
 
-During normal operation, the memory card API maintains a cache of the current sector to improve performance of PetiteFs. 
+During normal operation, the memory card API maintains a cache of the current sector to improve performance of PetiteFs.
 
 ## Program Options
 
