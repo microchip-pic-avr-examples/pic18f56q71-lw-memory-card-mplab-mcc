@@ -194,6 +194,9 @@ extern "C" {
     //Returns an R1 type response
     bool memCard_receiveResponse_R1(uint8_t* dst);
     
+    //Reads the 4-byte OCR Register
+    CommandError memCard_readOCR(uint8_t* data);
+    
     //Reads the 16-byte CSD Register
     CommandError memCard_readCSD(uint8_t* data);
     

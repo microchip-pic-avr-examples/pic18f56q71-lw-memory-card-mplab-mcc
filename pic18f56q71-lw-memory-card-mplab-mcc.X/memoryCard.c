@@ -278,8 +278,6 @@ bool memCard_setupFastSPI(void)
         return false;
     }
     
-    
-    
     if (tUnit > 2)
     {
         //MCU limits the speed, so go-to max speed
@@ -552,66 +550,13 @@ uint8_t memCard_sendACMD_R1(uint8_t commandIndex, uint32_t data)
 //Returns the OCR register from the memory card
 CardCapacityType memCard_getCapacityType(void)
 {
-    //Send an extra byte to help the controller between commands
-    SPI1_sendByte(0xFF);
-    
-    uint8_t memPoolTx[6];
     uint8_t memPoolRx[4];
     
-    //Prepare Command Header
-    //0x40 - Fixed + CMD58
-    memPoolTx[0] = 0x40 | 58;
-    
-#ifdef MEM_CARD_DEBUG_ENABLE
-    printf(DEBUG_STRING, 58);
-#endif
-    
-    //No data!
-    memPoolTx[1] = 0x00;
-    memPoolTx[2] = 0x00;
-    memPoolTx[3] = 0x00; 
-    memPoolTx[4] = 0x00;
-    
-    //Compute the CRC7 Value
-    memPoolTx[5] = memCard_runCRC7(&memPoolTx[0], 5);
-    
-    CARD_CS_SetLow();
-    
-    //Transmit header
-    SPI1_sendBytes(&memPoolTx[0], 6);
-    
-    CommandStatus stat;
-    
-    if (!memCard_receiveResponse_R1(&stat.data))
+    if (memCard_readOCR(&memPoolRx[0]) != CARD_NO_ERROR)
     {
-        //Response Timeout
-        CARD_CS_SetHigh();
-        return CCS_INVALID;
-    }
-    
-    if (stat.data != HEADER_NO_ERROR)
-    {
-        //Something went wrong
-        CARD_CS_SetHigh();
         return CCS_INVALID;
     }
 
-    //Now capture 4 more bytes
-    
-    memPoolTx[0] = 0xFF;
-    memPoolTx[1] = 0xFF;
-    memPoolTx[2] = 0xFF;
-    memPoolTx[3] = 0xFF;
-    
-    //Get the last bytes of the header
-    SPI1_exchangeBytes(&memPoolTx[0], &memPoolRx[0], 4);
-    CARD_CS_SetHigh();
-
-#ifdef MEM_CARD_DEBUG_ENABLE
-    printf("[DEBUG] Printing OCR Register\r\n");
-    memCard_printData(&memPoolRx[0], 4);
-#endif
-    
     //OCR is bit 30 from the return
     return ((memPoolRx[0] & 0x40) != 0x00) ? CCS_HIGH_CAPACITY : CCS_LOW_CAPACITY;
 }
@@ -645,11 +590,80 @@ bool memCard_receiveResponse_R1(uint8_t* dst)
     return true;
 }
 
+//Reads the 4-byte OCR Register
+CommandError memCard_readOCR(uint8_t* data)
+{
+    if (cardStatus == STATUS_CARD_NONE)
+        return CARD_NOT_INIT;
+    
+    //Send an extra byte to help the controller between commands
+    SPI1_sendByte(0xFF);
+    
+    uint8_t memPoolTx[6];
+    
+    //Prepare Command Header
+    //0x40 - Fixed + CMD58
+    memPoolTx[0] = 0x40 | 58;
+    
+#ifdef MEM_CARD_DEBUG_ENABLE
+    printf(DEBUG_STRING, 58);
+#endif
+    
+    //No data!
+    memPoolTx[1] = 0x00;
+    memPoolTx[2] = 0x00;
+    memPoolTx[3] = 0x00; 
+    memPoolTx[4] = 0x00;
+    
+    //Compute the CRC7 Value
+    memPoolTx[5] = memCard_runCRC7(&memPoolTx[0], 5);
+    
+    CARD_CS_SetLow();
+    
+    //Transmit header
+    SPI1_sendBytes(&memPoolTx[0], 6);
+    
+    CommandStatus stat;
+    
+    if (!memCard_receiveResponse_R1(&stat.data))
+    {
+        //Response Timeout
+        CARD_CS_SetHigh();
+        return CARD_SPI_TIMEOUT;
+    }
+    
+    //Note - card can be idle or init, depending on the reason for reading values
+    if ((stat.data & 0xF7) != HEADER_NO_ERROR)
+    {
+        //Something went wrong
+        CARD_CS_SetHigh();
+        return CARD_RESPONSE_ERROR;
+    }
+
+    //Now capture 4 more bytes
+    
+    memPoolTx[0] = 0xFF;
+    memPoolTx[1] = 0xFF;
+    memPoolTx[2] = 0xFF;
+    memPoolTx[3] = 0xFF;
+    
+    //Get the last bytes of the header
+    SPI1_exchangeBytes(&memPoolTx[0], &data[0], 4);
+    CARD_CS_SetHigh();
+
+#ifdef MEM_CARD_DEBUG_ENABLE
+    printf("[DEBUG] Printing OCR Register\r\n");
+    memCard_printData(&data[0], 4);
+#endif
+    
+    return CARD_NO_ERROR;
+}
+
 //Reads the 16-byte CSD Register
 CommandError memCard_readCSD(uint8_t* data)
 {
     if (cardStatus != STATUS_CARD_READY)
-        return false;
+        return CARD_NOT_INIT;
     
     //Send CSD read command
     //CMD9

@@ -3,7 +3,7 @@
     <type>com.microchip.mplab.nbide.embedded.makeproject</type>
     <configuration>
         <data xmlns="http://www.netbeans.org/ns/make-project/1">
-            <name>pic18f56q71-temp-log-mplab-mcc</name>
+            <name>pic18f56q71-lw-memory-card-mplab-mcc</name>
             <creation-uuid>18d56580-2dac-4558-b4bb-4ca41e1b6d04</creation-uuid>
             <make-project-type>0</make-project-type>
             <sourceEncoding>ISO-8859-1</sourceEncoding>
