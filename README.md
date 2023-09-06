@@ -4,7 +4,7 @@
 
 # PetiteFs on a Memory Card with PIC18F56Q71
 
-[PetiteFs](http://elm-chan.org/fsw/ff/00index_e.html) is a lightweight, open-source library for FAT file system management. This example implements a memory card interface and implements the PetiteFs library to access the FAT file system on the card with the PIC18F56Q71 microcontroller. 
+[PetiteFs](http://elm-chan.org/fsw/ff/00index_e.html) is a lightweight, open-source library for FAT file system management. This example implements a memory card interface and implements the PetiteFs library to access the FAT file system on the card with the PIC18F56Q71 microcontroller.  
 
 ## Related Documentation
 
