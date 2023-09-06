@@ -14,6 +14,9 @@ extern "C" {
 //If defined, all memory card commands are printed to terminal
 #define MEM_CARD_DEBUG_ENABLE
     
+//If defined, sector requests/file I/O are printed to terminal
+#define MEM_CARD_FILE_DEBUG_ENABLE
+    
 //If defined, all copied bytes (from READ DISK) are printed
 //#define MEM_CARD_MEMORY_DEBUG_ENABLE
     

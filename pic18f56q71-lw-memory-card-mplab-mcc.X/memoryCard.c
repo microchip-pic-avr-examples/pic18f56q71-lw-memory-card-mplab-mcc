@@ -193,17 +193,19 @@ bool memCard_initCard(void)
         CardCapacityType memCapacity = CCS_INVALID;
         memCapacity = memCard_getCapacityType();
         
+#ifdef MEM_CARD_DEBUG_ENABLE
         switch (memCapacity)
         {
             case CCS_LOW_CAPACITY:
-                printf("Memory Card is small - use byte-mode addressing\r\n");
+                printf("[DEBUG] Memory Card is small - use byte-mode addressing\r\n");
                 break;
             case CCS_HIGH_CAPACITY:
-                printf("Memory Card is large - use LBA addressing\r\n");
+                printf("[DEBUG] Memory Card is large - use LBA addressing\r\n");
                 break;
             default:
                 printf("[WARN] CMD58 was unable to determine capacity support\r\n");
         }
+#endif
         
         //Set Block Size to 512B
         //CMD16
@@ -215,13 +217,13 @@ bool memCard_initCard(void)
         
         //Card is now usable for memory operations
         cardStatus = STATUS_CARD_READY;
-        printf("Memory card - READY\r\n");
+        printf("Memory Card - READY\r\n");
         
 #ifndef DISABLE_SPEED_SWITCH
         //Set SPI Frequency
         if (!memCard_setupFastSPI())
         {
-            printf("[WARN] Unable to change SPI clock speeds\r\n");
+            printf("[WARN] Unable to detect max SPI clock speeds\r\n");
         }
 #endif
         
@@ -332,7 +334,7 @@ bool memCard_setupFastSPI(void)
     
     speedSwitchOK = true;
     
-    printf("Enabling SPI CLK Switch to ");    
+    printf("Setting max SPI CLK to ");    
     
     switch(fastBaud)
     {
@@ -719,7 +721,7 @@ bool memCard_readFromDisk(uint32_t sect, uint16_t offset, uint8_t* data, uint16_
     if (cardStatus != STATUS_CARD_READY)
         return false;
     
-#ifdef MEM_CARD_DEBUG_ENABLE
+#ifdef MEM_CARD_FILE_DEBUG_ENABLE
     printf("[DEBUG FILE I/O] Requesting: Sector %lu at offset %u for %u bytes\r\n", sect, offset, nBytes);
 #endif
     
@@ -741,7 +743,7 @@ bool memCard_readFromDisk(uint32_t sect, uint16_t offset, uint8_t* data, uint16_
         }
     }
 #endif
-#ifdef MEM_CARD_DEBUG_ENABLE
+#ifdef MEM_CARD_FILE_DEBUG_ENABLE
     else
     {
         printf("[DEBUG FILE I/O] Sector cache hit\r\n");
@@ -784,7 +786,7 @@ bool memCard_prepareWrite(uint32_t sector)
         return false;
     }
     
-#ifdef MEM_CARD_DEBUG_ENABLE
+#ifdef MEM_CARD_FILE_DEBUG_ENABLE
     printf("[DEBUG FILE I/O] Preparing for write on sector %lu\r\n", sector);
 #endif
     
@@ -827,7 +829,7 @@ bool memCard_queueWrite(uint8_t* data, uint16_t dLen)
         count++;
     }
     
-#ifdef MEM_CARD_DEBUG_ENABLE
+#ifdef MEM_CARD_FILE_DEBUG_ENABLE
     printf("[DEBUG FILE I/O] Queued %u bytes for write\r\n", count);
 #endif
     
@@ -853,7 +855,7 @@ CommandError memCard_writeBlock(void)
         return CARD_WRITE_SIZE_ERROR;
     }
     
-#ifdef MEM_CARD_DEBUG_ENABLE
+#ifdef MEM_CARD_FILE_DEBUG_ENABLE
     printf("[DEBUG FILE I/O] Writing %u bytes to sector %lu \r\n", writeSize, cacheBlockAddr);
 #endif
     
@@ -1015,7 +1017,7 @@ CommandError memCard_readBlock(uint32_t blockAddr)
     
     if (writeSize != WRITE_SIZE_INVALID)
     {
-#ifdef MEM_CARD_DEBUG_ENABLE
+#ifdef MEM_CARD_FILE_DEBUG_ENABLE
     printf("[DEBUG FILE I/O] Read failed due to write in progress\r\n");
 #endif
         return CARD_WRITE_IN_PROGRESS;
@@ -1024,14 +1026,14 @@ CommandError memCard_readBlock(uint32_t blockAddr)
 #ifndef MEM_CARD_DISABLE_CACHE
     if (blockAddr == cacheBlockAddr)
     {
-#ifdef MEM_CARD_DEBUG_ENABLE
+#ifdef MEM_CARD_FILE_DEBUG_ENABLE
     printf("[DEBUG FILE I/O] Sector %lu fetch skipped due to cache\r\n", blockAddr);
 #endif
         return CARD_NO_ERROR;
     }
 #endif
     
-#ifdef MEM_CARD_DEBUG_ENABLE
+#ifdef MEM_CARD_FILE_DEBUG_ENABLE
     printf("[DEBUG FILE I/O] Fetching Sector %lu\r\n", blockAddr);
 #endif
     
