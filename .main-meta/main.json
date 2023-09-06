@@ -37,7 +37,7 @@
             }
         },
         "author": "Robert Perkel",
-        "peripherals": [ "SPI", "CLC1", "CLC2", "TMR2", "CRC", "UART2" ],
+        "peripherals": [ "SPI", "CLC", "TMR2", "CRC", "UART" ],
         "keywords": [
             "File System", "Memory", "Memory Module"
         ],
