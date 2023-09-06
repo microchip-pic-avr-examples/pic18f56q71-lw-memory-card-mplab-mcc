@@ -66,9 +66,7 @@ PetiteFs handles file system management, but does not handle communication with 
 - `disk_readp`
 - `disk_writep`
 
-These functions call the memory card API to perform file system tasks.
-
-**Important: This example has implemented these functions!**
+These functions call the memory card API to perform file system tasks.  
 
 ## Operation
 
@@ -91,9 +89,11 @@ During normal operation, the memory card API maintains a cache of the current se
 | INIT_RETRIES | 100 | How many times to attempt to send the initization command the memory card.
 | FULL_RETRIES | 5 | If the all of the initialization commands, this the number of full retries before erroring out.
 | DISABLE_SPEED_SWITCH | Not defined | If defined, the card does not shift the clock speed during read/write operations. 
+| CRC_VALIDATE_READ | Defined | If defined, block reads will verify the CRC of the data. **Note: To invalid a failing block, set ENFORCE_DATA_CRC**
+| ENFORCE_DATA_CRC | Defined | If defined, block reads with a bad CRC will fail. 
 
-*Note: PetiteFs has a set of macros to modify functionality and/or reduce memory usage. See `pffconf.h` for more information.*
+*Note: PetiteFs has a set of macros to modify functionality and/or memory usage. See `pffconf.h` for more information.*
 
 ## Summary
 
-This example has demonstrated how to implement PetiteFs on the PIC18F56Q71. 
+This example has demonstrated how to implement PetiteFs on the PIC18F56Q71 family of microcontrollers.

@@ -1149,12 +1149,49 @@ CommandError memCard_receiveBlockData(uint8_t* data, uint16_t length)
     SPI1_receiveBytesTransmitFF(&crcResp[0], 2);
     
     CARD_CS_SetHigh();
+    SPI1_setSpeed(SPI_400KHZ_BAUD);
     
     //CRC16 CCIT Polynomial
     //0x1021
     
-    //TODO: Verify the Checksum
-    SPI1_setSpeed(SPI_400KHZ_BAUD);
+#ifdef CRC_VALIDATE_READ
+    
+#ifdef MEM_CARD_MEMORY_DEBUG_ENABLE
+    printf("[DEBUG] Data CRC = ");
+    memCard_printData(&crcResp[0], 2);
+#endif
+    
+    uint16_t crcOut;
+    
+    //Flush CRC Buffer before beginning
+    CRCCON0bits.SETUP = 0b00;
+    CRCOUT = 0x00000000;
+    
+    for (uint16_t i = 0; i < length; ++i)
+    {
+        CRC_WriteData(data[i]);
+        while (CRC_IsCrcBusy());
+    }
+    
+    //Now, load the CRC checksum in
+    CRC_WriteData(crcResp[0]);
+    while (CRC_IsCrcBusy());
+    CRC_WriteData(crcResp[1]);
+    while (CRC_IsCrcBusy());
+
+    crcOut = CRC_GetCalculatedResult(false, 0x00);
+            
+    //CRC Failed
+    if (crcOut != 0x0000)
+    {
+        printf("CRC failed during read\r\nC");
+#ifdef ENFORCE_DATA_CRC 
+        cacheBlockAddr = 0xFFFFFFFF;
+        return CARD_CRC_ERROR;
+#endif
+    }
+    
+#endif
     return CARD_NO_ERROR;
 }
 

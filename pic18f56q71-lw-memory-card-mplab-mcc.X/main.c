@@ -154,6 +154,7 @@ void modifyFile(const char* filename)
 int main(void)
 {
     SYSTEM_Initialize();
+    CRC_StartCrc();
     
     //Init SPI
     SPI1_initPins();

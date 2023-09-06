@@ -45,6 +45,13 @@ extern "C" {
 //If set, the SPI is kept at 400 kHz for all communication
 //#define DISABLE_SPEED_SWITCH 
     
+//If set, read operations will attempt to validate the CRC
+//This does not invalidate a read, unless ENFORCE_DATA_CRC is also set
+#define CRC_VALIDATE_READ
+    
+//If set, a read can fail due to bad CRC
+#define ENFORCE_DATA_CRC
+    
 //Set VDD for 2.7V to 3.6V Operation
 #define VHS_3V3 0b0001
     
