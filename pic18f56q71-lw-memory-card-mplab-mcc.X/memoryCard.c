@@ -722,7 +722,7 @@ bool memCard_readFromDisk(uint32_t sect, uint16_t offset, uint8_t* data, uint16_
         return false;
     
 #ifdef MEM_CARD_FILE_DEBUG_ENABLE
-    printf("[DEBUG FILE I/O] Requesting: Sector %lu at offset %u for %u bytes\r\n", sect, offset, nBytes);
+    printf("[DEBUG FILE I/O] Requesting Sector %lu at offset %u for %u bytes\r\n", sect, offset, nBytes);
 #endif
     
 #ifdef MEM_CARD_DISABLE_CACHE
