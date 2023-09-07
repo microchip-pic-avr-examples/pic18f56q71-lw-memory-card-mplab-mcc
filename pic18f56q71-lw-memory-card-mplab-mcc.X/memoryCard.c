@@ -190,7 +190,6 @@ bool memCard_initCard(void)
         
         //Check for High Capacity Support
         //CMD58
-        CardCapacityType memCapacity = CCS_INVALID;
         memCapacity = memCard_getCapacityType();
         
 #ifdef MEM_CARD_DEBUG_ENABLE
