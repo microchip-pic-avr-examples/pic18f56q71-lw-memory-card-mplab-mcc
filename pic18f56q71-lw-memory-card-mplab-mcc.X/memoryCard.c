@@ -814,7 +814,7 @@ bool memCard_queueWrite(uint8_t* data, uint16_t dLen)
     }
 
     //Check write counter
-    if ((writeSize == WRITE_SIZE_INVALID) || (writeSize >= FAT_BLOCK_SIZE))
+    if ((writeSize == WRITE_SIZE_INVALID) || (writeSize > FAT_BLOCK_SIZE))
     {
         return false;
     }
@@ -849,7 +849,7 @@ CommandError memCard_writeBlock(void)
         return CARD_NOT_INIT;
     }
     
-    if ((writeSize == WRITE_SIZE_INVALID) || (writeSize >= FAT_BLOCK_SIZE))
+    if ((writeSize == WRITE_SIZE_INVALID) || (writeSize > FAT_BLOCK_SIZE))
     {
         return CARD_WRITE_SIZE_ERROR;
     }
