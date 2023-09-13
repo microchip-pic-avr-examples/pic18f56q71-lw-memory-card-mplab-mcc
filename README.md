@@ -104,7 +104,7 @@ When a memory card is inserted, the program will initialize the card with the fu
 
 ### Known Issues
 
-- On startup, the example will attempt to mount the memory card, even if one is not plugged in. The operation will fail without causing any other issues.
+- On startup, the example will attempt to mount the memory card, even if one is not plugged in. 
 
 ## Summary
 
