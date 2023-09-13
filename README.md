@@ -2,18 +2,18 @@
 
 [![MCHP](images/microchip.png)](https://www.microchip.com)
 
-# PetiteFs on a Memory Card with PIC18F56Q71
+# Petit FatFs on a Memory Card with PIC18F56Q71
 
-[PetiteFs](http://elm-chan.org/fsw/ff/00index_p.html) is a lightweight, open-source library for File Allocation Table (FAT) file systems. This example features a memory card interface and implements the PetiteFs library to access the FAT file system on the card with the PIC18F56Q71 microcontroller.  
+[Petit FatFs](http://elm-chan.org/fsw/ff/00index_p.html) is a lightweight, open-source library for File Allocation Table (FAT) file systems. This example features a memory card interface and implements the Petit FatFs library to access the FAT file system on the card with the PIC18F56Q71 microcontroller.  
 
 ## Related Examples
 
 - [FatFs on a Memory Card with PIC18F56Q71](https://github.com/microchip-pic-avr-examples/pic18f56q71-full-memory-card-mplab-mcc)
-    - FatFs has a higher memory footprint than PetiteFs, but is significantly more powerful
+    - FatFs has a higher memory footprint than Petit FatFs, but is significantly more powerful
 
 ## Related Documentation
 
-- [PetiteFs API Documentation](http://elm-chan.org/fsw/ff/00index_p.html)
+- [Petit FatFs API Documentation](http://elm-chan.org/fsw/ff/00index_p.html)
 - [Memory Card Communication](http://elm-chan.org/docs/mmc/mmc_e.html)
 
 ## Software Used
@@ -21,7 +21,7 @@
 - [MPLAB&reg; X IDE v6.1.5 or newer](https://www.microchip.com/en-us/tools-resources/develop/mplab-x-ide?utm_source=GitHub&utm_medium=TextLink&utm_campaign=MCU8_MMTCha_pic18q71&utm_content=pic18f56q71-lw-memory-card-mplab-mcc&utm_bu=MCU08)
 - [MPLAB XC8 v2.45 or newer](https://www.microchip.com/en-us/tools-resources/develop/mplab-xc-compilers?utm_source=GitHub&utm_medium=TextLink&utm_campaign=MCU8_MMTCha_pic18q71&utm_content=pic18f56q71-lw-memory-card-mplab-mcc&utm_bu=MCU08)
 - [MPLAB Code Configurator (MCC)](https://www.microchip.com/en-us/tools-resources/configure/mplab-code-configurator?utm_source=GitHub&utm_medium=TextLink&utm_campaign=MCU8_MMTCha_pic18q71&utm_content=pic18f56q71-lw-memory-card-mplab-mcc&utm_bu=MCU08)
-- [PetiteFs R0.03a (Included in Project)](http://elm-chan.org/fsw/ff/00index_p.html)
+- [Petit FatFs R0.03a (Included in Project)](http://elm-chan.org/fsw/ff/00index_p.html)
 
 ## Hardware Used
 
@@ -29,7 +29,7 @@
 - [Curiosity Nano Base for Click Boards&trade;](https://www.microchip.com/en-us/development-tool/AC164162?utm_source=GitHub&utm_medium=TextLink&utm_campaign=MCU8_MMTCha_pic18q71&utm_content=pic18f56q71-lw-memory-card-mplab-mcc&utm_bu=MCU08)
 - [MicroSD Click (MIKROE-924)](https://www.mikroe.com/microsd-click)
 - [2 GB Memory Card](https://www.amazon.com/Transcend-microSD-Without-Adapter-TS2GUSDC/dp/B001BNNZXO/)
-    - PetiteFs only supports small memory cards 
+    - Petit FatFs only supports small memory cards 
 
 ## Setup
 
@@ -43,7 +43,7 @@ Before use, format the memory card as a FAT volume. Create a file called `test.t
 
 `Hello from my Computer`
 
-These steps are required since PetiteFs cannot resize or create a file. This means the file needs to be large enough to contain the full text written at run-time. A copy of `test.txt` is also included in the repository. 
+These steps are required since Petit FatFs cannot resize or create a file. This means the file needs to be large enough to contain the full text written at run-time. A copy of `test.txt` is also included in the repository. 
 
 **Note**: This example supports hot-swapping memory cards, and does not require the card to be installed on power-up.  
 
@@ -61,9 +61,9 @@ These steps are required since PetiteFs cannot resize or create a file. This mea
 Data will print when a memory card is inserted, as shown below.  
 ![Example Output](./images/exampleOutput.png)
 
-## Implementing PetiteFs
+## Implementing Petit FatFs
 
-PetiteFs handles file system management, but does not handle communication with the memory card. The library requires three functions to be implemented:
+Petit FatFs handles file system management, but does not handle communication with the memory card. The library requires three functions to be implemented:
 
 - `disk_initialize`
 - `disk_readp`
@@ -77,7 +77,7 @@ When a memory card is inserted, a switch in the socket pulls a detection line lo
 
 Communication with the memory card is via Serial Peripheral Interface (SPI). A series of commands are sent to the card to configure and prepare it for file read/write. For commands, the clock frequency is 400 kHz. During memory read/write, the clock frequency is increased up to a maximum of 10.6 MHz, depending on the memory card's indicated maximum.
 
-During normal operation, the memory card API maintains a cache of the current sector to improve the performance of PetiteFs.
+During normal operation, the memory card API maintains a cache of the current sector to improve the performance of Petit FatFs.
 
 ## Operation
 
@@ -100,7 +100,7 @@ When a memory card is inserted, the program will initialize the card with the fu
 | CRC_VALIDATE_READ | Defined | If defined, block reads will verify the Cyclic Redundancy Check (CRC) of the data. **To reject bad data, set ENFORCE_DATA_CRC.**
 | ENFORCE_DATA_CRC | Defined | If defined, block reads with a bad CRC will fail
 
-**Note**: PetiteFs has a set of macros to modify functionality and/or memory usage. See `pffconf.h` for more information.
+**Note**: Petit FatFs has a set of macros to modify functionality and/or memory usage. See `pffconf.h` for more information.
 
 ### Known Issues
 
@@ -108,4 +108,4 @@ When a memory card is inserted, the program will initialize the card with the fu
 
 ## Summary
 
-This example has demonstrated how to implement PetiteFs on the PIC18F56Q71 family of microcontrollers.
+This example has demonstrated how to implement Petit FatFs on the PIC18F56Q71 family of microcontrollers.
