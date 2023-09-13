@@ -6,10 +6,14 @@
 
 [PetiteFs](http://elm-chan.org/fsw/ff/00index_p.html) is a lightweight, open-source library for File Allocation Table (FAT) file systems. This example features a memory card interface and implements the PetiteFs library to access the FAT file system on the card with the PIC18F56Q71 microcontroller.  
 
+## Related Examples
+
+- [FatFs on a Memory Card with PIC18F56Q71](https://github.com/microchip-pic-avr-examples/pic18f56q71-full-memory-card-mplab-mcc)
+    - FatFs has a higher memory footprint than PetiteFs, but is significantly more powerful
+
 ## Related Documentation
 
 - [PetiteFs API Documentation](http://elm-chan.org/fsw/ff/00index_p.html)
-- [FatFs Documentation](http://elm-chan.org/fsw/ff/00index_e.html)
 - [Memory Card Communication](http://elm-chan.org/docs/mmc/mmc_e.html)
 
 ## Software Used
@@ -39,13 +43,13 @@ Before use, format the memory card as a FAT volume. Create a file called `test.t
 
 `Hello from my Computer`
 
-These steps are required since PetiteFs cannot resize or create a file. This means the file needs to be large enough to contain the full text written at run-time. A copy of `test.txt` is also included in the repository.
+These steps are required since PetiteFs cannot resize or create a file. This means the file needs to be large enough to contain the full text written at run-time. A copy of `test.txt` is also included in the repository. 
 
 **Note**: This example supports hot-swapping memory cards, and does not require the card to be installed on power-up.  
 
 ### UART Setup
 
-1. Plug-in the Curiosity Nano.
+1. Plug in the Curiosity Nano.
 2. Open MPLAB X IDE.
 3. Click the **MPLAB Data Visualizer** button in the toolbar.  
 ![Toolbar](./images/toolbar.png)
@@ -90,13 +94,17 @@ When a memory card is inserted, the program will initialize the card with the fu
 | R1_TIMEOUT_BYTES | 10 | How many bytes to wait for a valid response code
 | READ_TIMEOUT_BYTES | 30 | How many bytes to wait for a data response
 | WRITE_TIMEOUT_BYTES | 30 | How many bytes to wait for a write response
-| INIT_RETRIES | 100 | How many times to try and send the initization command to the memory card.
+| INIT_RETRIES | 100 | How many times to try and send the initization command to the memory card
 | FULL_RETRIES | 5 | This sets the number of times the system will attempt to initialize the memory card
 | DISABLE_SPEED_SWITCH | Not defined | If defined, the card will remain at 400 kHz speeds for all communication. This will impact performance of read/write operations.
 | CRC_VALIDATE_READ | Defined | If defined, block reads will verify the Cyclic Redundancy Check (CRC) of the data. **To reject bad data, set ENFORCE_DATA_CRC.**
 | ENFORCE_DATA_CRC | Defined | If defined, block reads with a bad CRC will fail
 
 **Note**: PetiteFs has a set of macros to modify functionality and/or memory usage. See `pffconf.h` for more information.
+
+### Known Issues
+
+- On startup, the example will attempt to mount the memory card, even if one is not plugged in. The operation will fail without causing any other issues.
 
 ## Summary
 
