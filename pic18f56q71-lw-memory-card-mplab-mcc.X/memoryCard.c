@@ -16,7 +16,6 @@ static uint32_t cacheBlockAddr;
 
 static uint16_t writeSize;
 static bool speedSwitchOK = false;
-static uint8_t fastBaud = SPI_400KHZ_BAUD;
 
 void memCard_printData(uint8_t* data, uint8_t size)
 {
@@ -64,7 +63,7 @@ bool memCard_initCard(void)
     writeSize = WRITE_SIZE_INVALID;
     
     //Move to 400 kHz baud to start
-    SPI1_setSpeed(SPI_400KHZ_BAUD);
+    SPI1_setSpeed(SPI_CMD_BAUD);
         
     bool good = true;
     
@@ -251,117 +250,11 @@ bool memCard_isCardReady(void)
 bool memCard_setupTimings(void)
 {
     uint8_t resp[16];
-    fastBaud = SPI_400KHZ_BAUD;
     
     //Read the CSD register
     if (memCard_readCSD(&resp[0]) != CARD_NO_ERROR)
     {
         return false;
-    }
-    
-    //Add clocks between CMDs to improve compatability
-    for (uint8_t i = 0; i < MEMORY_CARD_IDLE_CLOCK_CYCLES; i++)
-    {
-        SPI1_sendByte(0xFF);
-    }
-    
-    uint8_t tSpeed = resp[3];
-    
-#ifdef MEM_CARD_DEBUG_ENABLE
-    printf("[DEBUG] Transfer Speed Byte = 0x%x\r\n", tSpeed);
-#endif
-    
-    //Byte 4 contains transfer speed
-    //2:0 - Transfer unit
-    //6:3 - Multiplier
-    //7 - Reserved
-    uint8_t tUnit = tSpeed & 0x07;
-    
-    uint8_t multRef = (tSpeed & 0x78) >> 3;
-    if (multRef == 0)
-    {
-        return false;
-    }
-    
-    if (tUnit > 2)
-    {
-        //MCU limits the speed, so go-to max speed
-        fastBaud = (SPI_10_6MHZ_BAUD);
-    }
-    else if (tUnit == 2)
-    {
-        //10 MHz base   
-        if (multRef >= 2)
-        {
-            //Multiplier > 1.1
-            fastBaud = (SPI_10_6MHZ_BAUD);
-        }
-        else
-        {
-            fastBaud = (SPI_8_MHZ_BAUD);
-        }
-    }
-    else if (tUnit == 1)
-    {
-        //1 MHz base
-        if (multRef == 0x0F)
-        {
-            fastBaud = (SPI_8_MHZ_BAUD);
-        }
-        else if (multRef == 0x0E)
-        {
-            fastBaud = (SPI_6_4MHZ_BAUD);
-        }
-        else if (multRef >= 9)
-        {
-            fastBaud = (SPI_4MHZ_BAUD);
-        }
-        else if (multRef == 8)
-        {
-            fastBaud = (SPI_3_2MHZ_BAUD);
-        }
-        else if (multRef >= 5)
-        {
-            fastBaud = (SPI_2MHZ_BAUD);
-        }
-        else
-        {
-            fastBaud = (SPI_1MHZ_BAUD);
-        }
-    }
-    else
-    {
-        //100 kHz base timing - not worth switching
-        return false;
-    }
-    
-    speedSwitchOK = true;
-    
-    printf("Setting max SPI CLK to ");    
-    
-    switch(fastBaud)
-    {
-        case SPI_10_6MHZ_BAUD:
-            printf("10.6 MHz\r\n");
-            break;
-        case SPI_8_MHZ_BAUD:
-            printf("8 MHz\r\n");
-            break;
-        case SPI_6_4MHZ_BAUD:
-            printf("6.4 MHz\r\n");
-            break;
-        case SPI_4MHZ_BAUD:
-            printf("4 MHz\r\n");
-            break;
-        case SPI_3_2MHZ_BAUD:
-            printf("3.2 MHz\r\n");
-            break;
-        case SPI_2MHZ_BAUD:
-            printf("2 MHz\r\n");
-            break;
-        case SPI_1MHZ_BAUD:
-            printf("1 MHz\r\n");
-            break;
     }
     
     return true;
@@ -933,7 +826,7 @@ CommandError memCard_writeBlock(void)
 #ifndef DISABLE_SPEED_SWITCH
     if (speedSwitchOK)
     {
-        SPI1_setSpeed(fastBaud);
+        SPI1_setSpeed(SPI_FAST_BAUD);
     }
 #endif
     
@@ -960,7 +853,7 @@ CommandError memCard_writeBlock(void)
     bool good = false;
     
     //Return to 400 kHz base
-    SPI1_setSpeed(SPI_400KHZ_BAUD);
+    SPI1_setSpeed(SPI_CMD_BAUD);
     
     //Configure and Start Timeout Timer
     TU16A_PeriodValueSet(DEFAULT_WRITE_TIMEOUT);
@@ -1177,7 +1070,7 @@ CommandError memCard_receiveBlockData(uint8_t* data, uint16_t length)
 #ifndef DISABLE_SPEED_SWITCH
     if (speedSwitchOK)
     {
-        SPI1_setSpeed(fastBaud);
+        SPI1_setSpeed(SPI_FAST_BAUD);
     }
 #endif
     
@@ -1190,7 +1083,7 @@ CommandError memCard_receiveBlockData(uint8_t* data, uint16_t length)
     SPI1_receiveBytesTransmitFF(&crcResp[0], 2);
     
     CARD_CS_SetHigh();
-    SPI1_setSpeed(SPI_400KHZ_BAUD);
+    SPI1_setSpeed(SPI_CMD_BAUD);
     
     //CRC16 CCIT Polynomial
     //0x1021

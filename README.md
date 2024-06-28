@@ -36,6 +36,7 @@
 - Significantly improved compatability with memory cards
 - Modified time-outs to match specification
 - Upgraded XC8 / MPALB X / MCC Versions
+- Reduced max clock frequency from 10.4 MHz to 8 MHz to improve compatability
 
 ## Setup
 
@@ -81,7 +82,7 @@ These functions call the memory card API to perform file system tasks.
 
 When a memory card is inserted, a switch in the socket pulls a detection line low. The microcontroller debounces this signal, then sets a flag to initialize the memory card outside of the interrupt handler. When inserted, the card may fail to initialize due to powering on delays, but the program will retry multiple times before erroring out. 
 
-Communication with the memory card is via Serial Peripheral Interface (SPI). A series of commands are sent to the card to configure and prepare it for file read/write. For commands, the clock frequency is 400 kHz. During memory read/write, the clock frequency is increased up to a maximum of 10.6 MHz, depending on the memory card's indicated maximum.
+Communication with the memory card is via Serial Peripheral Interface (SPI). A series of commands are sent to the card to configure and prepare it for file read/write. For commands, the clock frequency is 400 kHz. During memory read/write, the clock frequency is increased up to a maximum of 8 MHz, depending on the memory card's indicated maximum.
 
 During normal operation, the memory card API maintains a cache of the current sector to improve the performance of Petit FatFs.
 

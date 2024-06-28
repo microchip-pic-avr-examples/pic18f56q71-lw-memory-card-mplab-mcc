@@ -71,14 +71,12 @@ extern "C" {
 #define HEADER_INVALID 0xFF
     
 //SPI Baud Rates (Assume SPI Base = 64 MHz)
-#define SPI_10_6MHZ_BAUD 2
-#define SPI_8_MHZ_BAUD 3
-#define SPI_6_4MHZ_BAUD 4
-#define SPI_4MHZ_BAUD 7
-#define SPI_3_2MHZ_BAUD 9
-#define SPI_2MHZ_BAUD 15
-#define SPI_1MHZ_BAUD 31
-#define SPI_400KHZ_BAUD 79
+    
+//8 MHz
+#define SPI_FAST_BAUD 3
+    
+//400 kHz
+#define SPI_CMD_BAUD 79
     
 //Bad OCR return value
 #define CARD_BAD_OCR 0xFFFFFFFF
