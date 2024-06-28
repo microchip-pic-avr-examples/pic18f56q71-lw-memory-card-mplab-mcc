@@ -5,13 +5,13 @@
  * 
  * @ingroup uart2
  * 
- * @brief This is the generated driver implementation file for the UART2 driver using CCL
+ * @brief This is the generated driver implementation file for the UART2 driver using the Universal Asynchronous Receiver and Transmitter (UART) module.
  *
- * @version UART2 Driver Version 3.0.4
+ * @version UART2 Driver Version 3.0.6
 */
 
 /*
-© [2023] Microchip Technology Inc. and its subsidiaries.
+© [2024] Microchip Technology Inc. and its subsidiaries.
 
     Subject to your compliance with these terms, you may use Microchip 
     software and any derivatives exclusively with Microchip products. 
@@ -113,8 +113,8 @@ void UART2_Initialize(void)
     U2CON1 = 0x80; 
     //FLO off; TXPOL not inverted; STP Transmit 1Stop bit, receiver verifies first Stop bit; RXPOL not inverted; RUNOVF RX input shifter stops all activity; 
     U2CON2 = 0x0; 
-    //BRGL 34; 
-    U2BRGL = 0x22; 
+    //BRGL 138; 
+    U2BRGL = 0x8A; 
     //BRGH 0; 
     U2BRGH = 0x0; 
     //TXBE empty; STPMD in middle of first Stop bit; TXWRE No error; 

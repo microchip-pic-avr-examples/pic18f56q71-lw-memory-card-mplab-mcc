@@ -7,11 +7,11 @@
  * 
  * @brief API implementations for the TMR2 module.
  *
- * @version TMR2 Driver Version 3.0.3
+ * @version TMR2 Driver Version 3.0.4
  */
 
 /*
-© [2023] Microchip Technology Inc. and its subsidiaries.
+© [2024] Microchip Technology Inc. and its subsidiaries.
 
     Subject to your compliance with these terms, you may use Microchip 
     software and any derivatives exclusively with Microchip products. 
@@ -39,22 +39,22 @@
 #include "../tmr2.h"
 
 const struct TMR_INTERFACE Timer2 = {
-    .Initialize = Timer2_Initialize,
-    .Start = Timer2_Start,
-    .Stop = Timer2_Stop,
-    .PeriodCountSet = Timer2_PeriodCountSet,
-    .TimeoutCallbackRegister = Timer2_OverflowCallbackRegister,
-    .Tasks = Timer2_Tasks
+    .Initialize = TMR2_Initialize,
+    .Start = TMR2_Start,
+    .Stop = TMR2_Stop,
+    .PeriodCountSet = TMR2_PeriodCountSet,
+    .TimeoutCallbackRegister = TMR2_OverflowCallbackRegister,
+    .Tasks = TMR2_Tasks
 };
 
-static void (*Timer2_OverflowCallback)(void);
-static void Timer2_DefaultOverflowCallback(void);
+static void (*TMR2_OverflowCallback)(void);
+static void TMR2_DefaultOverflowCallback(void);
 
 /**
   Section: TMR2 APIs
 */
 
-void Timer2_Initialize(void){
+void TMR2_Initialize(void){
 
     // Set TMR2 to the options selected in the User Interface
     // TCS MFINTOSC_500KHz; 
@@ -69,72 +69,74 @@ void Timer2_Initialize(void){
     T2TMR = 0x0;
 
     // Set default overflow callback
-    Timer2_OverflowCallbackRegister(Timer2_DefaultOverflowCallback);
+    TMR2_OverflowCallbackRegister(TMR2_DefaultOverflowCallback);
 
     // Clearing IF flag.
-     PIR3bits.TMR2IF = 0;
+    PIR3bits.TMR2IF = 0;
     // TCKPS 1:8; TMRON on; TOUTPS 1:1; 
     T2CON = 0xB0;
 }
 
-void Timer2_ModeSet(Timer2_HLT_MODE mode)
+void TMR2_ModeSet(TMR2_HLT_MODE mode)
 {
    // Configure different types HLT mode
     T2HLTbits.T2MODE = mode;
 }
 
-void Timer2_ExtResetSourceSet(Timer2_HLT_EXT_RESET_SOURCE reset)
+void TMR2_ExtResetSourceSet(TMR2_HLT_EXT_RESET_SOURCE reset)
 {
     //Configure different types of HLT external reset source
     T2RSTbits.T2RSEL = reset;
 }
 
-void Timer2_Start(void)
+void TMR2_Start(void)
 {
     // Start the Timer by writing to TMRxON bit
     T2CONbits.TMR2ON = 1;
 }
 
-void Timer2_Stop(void)
+void TMR2_Stop(void)
 {
     // Stop the Timer by writing to TMRxON bit
     T2CONbits.TMR2ON = 0;
 }
 
-uint8_t Timer2_Read(void)
+uint8_t TMR2_Read(void)
 {
     uint8_t readVal;
     readVal = TMR2;
     return readVal;
 }
 
-void Timer2_Write(uint8_t timerVal)
+void TMR2_Write(uint8_t timerVal)
 {
     // Write to the Timer2 register
     TMR2 = timerVal;;
 }
 
-void Timer2_PeriodCountSet(size_t periodVal)
+void TMR2_PeriodCountSet(size_t periodVal)
 {
    PR2 = (uint8_t) periodVal;
 }
 
-void Timer2_OverflowCallbackRegister(void (* InterruptHandler)(void)){
-    Timer2_OverflowCallback = InterruptHandler;
+void TMR2_OverflowCallbackRegister(void (* InterruptHandler)(void))
+{
+   TMR2_OverflowCallback = InterruptHandler;
 }
 
-static void Timer2_DefaultOverflowCallback(void){
+static void TMR2_DefaultOverflowCallback(void)
+{
     // add your TMR2 interrupt custom code
-    // or set custom function using Timer2_OverflowCallbackRegister()
+    // or set custom function using TMR2_OverflowCallbackRegister()
 }
 
-void Timer2_Tasks(void)
+void TMR2_Tasks(void)
 {
     if(PIR3bits.TMR2IF)
     {
         // Clearing IF flag.
         PIR3bits.TMR2IF = 0;
-        Timer2_OverflowCallback();
+       TMR2_OverflowCallback();
     }
 }
 

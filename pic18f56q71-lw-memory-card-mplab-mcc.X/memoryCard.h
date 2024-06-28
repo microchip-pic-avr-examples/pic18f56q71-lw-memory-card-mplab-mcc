@@ -24,17 +24,20 @@ extern "C" {
 //Extremely slow. Used for debugging only
 //#define MEM_CARD_DISABLE_CACHE
     
+//How many clock sequences to run between each command
+#define MEMORY_CARD_IDLE_CLOCK_CYCLES 10
+    
 //Macro for card insert / detect
 #define IS_CARD_ATTACHED() (!CLC2_OutputStatusGet())
     
 //Number of bytes to wait for valid response (for R1 commands)
 #define R1_TIMEOUT_BYTES 10
     
-//Number of bytes to wait for data response
-#define READ_TIMEOUT_BYTES 30
+//Worst case Read Time Delay (ms)
+#define DEFAULT_READ_TIMEOUT 250
     
-//Number of bytes to wait for the memory card to respond to a write
-#define WRITE_TIMEOUT_BYTES 30
+//Worst case Write Time Delay (ms)
+#define DEFAULT_WRITE_TIMEOUT 500
     
 //How many times will the driver attempt to init the Card (ACMD41 / CMD1)
 #define INIT_RETRIES 100
@@ -177,7 +180,7 @@ extern "C" {
     bool memCard_isCardReady(void);
     
     //Requests max clock speed info from card, and sets SPI frequency
-    bool memCard_setupFastSPI(void);
+    bool memCard_setupTimings(void);
     
     //Calculates the checksum for a block of data
     uint16_t memCard_calculateCRC16(uint8_t* data, uint16_t dLen);

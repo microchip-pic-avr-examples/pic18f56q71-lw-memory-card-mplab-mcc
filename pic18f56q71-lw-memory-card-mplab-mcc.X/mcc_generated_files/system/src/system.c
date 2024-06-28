@@ -7,10 +7,12 @@
  * 
  * @brief This file contains the API implementation for the System driver.
  *
- * @version Driver Version 1.0.2
+ * @version Driver Version 1.0.3
+ *
+ * @version Package Version 1.0.4
 */
 /*
-© [2023] Microchip Technology Inc. and its subsidiaries.
+© [2024] Microchip Technology Inc. and its subsidiaries.
 
     Subject to your compliance with these terms, you may use Microchip 
     software and any derivatives exclusively with Microchip products. 
@@ -40,7 +42,8 @@ void SYSTEM_Initialize(void)
     CLC1_Initialize();
     CLC2_Initialize();
     CRC_Initialize();
-    Timer2_Initialize();
+    TMR2_Initialize();
+    TU16A_Initialize();
     UART2_Initialize();
     INTERRUPT_Initialize();
 }

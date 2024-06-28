@@ -27,15 +27,21 @@
 
 - [PIC18F56Q71 Curiosity Nano Evaluation Kit (EV01G21A)](https://www.microchip.com/en-us/development-tool/EV01G21A?utm_source=GitHub&utm_medium=TextLink&utm_campaign=MCU8_MMTCha_pic18q71&utm_content=pic18f56q71-lw-memory-card-mplab-mcc&utm_bu=MCU08)
 - [Curiosity Nano Base for Click Boards&trade;](https://www.microchip.com/en-us/development-tool/AC164162?utm_source=GitHub&utm_medium=TextLink&utm_campaign=MCU8_MMTCha_pic18q71&utm_content=pic18f56q71-lw-memory-card-mplab-mcc&utm_bu=MCU08)
-- [MicroSD Click (MIKROE-924)](https://www.mikroe.com/microsd-click)
+- [MICROSD Click (MIKROE-924)](https://www.mikroe.com/microsd-click)
 - [2 GB Memory Card](https://www.amazon.com/Transcend-microSD-Without-Adapter-TS2GUSDC/dp/B001BNNZXO/)
     - Petit FatFs only supports small memory cards 
+
+## Changes in v1.10
+
+- Significantly improved compatability with memory cards
+- Modified time-outs to match specification
+- Upgraded XC8 / MPALB X / MCC Versions
 
 ## Setup
 
 ### Hardware Setup
 
-With the power off, plug in the Curiosity Nano into the adapter board. Put the MicroSD Click in slot 1.
+With the power off, plug in the Curiosity Nano into the adapter board. Put the MICROSD Click in slot 1.
 
 ### Memory Card Setup
 
@@ -91,9 +97,10 @@ When a memory card is inserted, the program will initialize the card with the fu
 | MEM_CARD_FILE_DEBUG_ENABLE | Defined | Prints file operation requests. If not defined, memory usage and performance will improve.
 | MEM_CARD_MEMORY_DEBUG_ENABLE | Not defined | Prints the raw memory bytes received from the memory card. If not defined, memory usage and performance will improve.
 | MEM_CARD_DISABLE_CACHE | Not defined | Disables file system caching, at a cost to performance. Use for debugging only.
+| MEMORY_CARD_IDLE_CLOCK_CYCLES | 10 | Sets the number of dummy bytes to send between commands
 | R1_TIMEOUT_BYTES | 10 | How many bytes to wait for a valid response code
-| READ_TIMEOUT_BYTES | 30 | How many bytes to wait for a data response
-| WRITE_TIMEOUT_BYTES | 30 | How many bytes to wait for a write response
+| DEFAULT_READ_TIMEOUT | 250 | Sets the timeout in milliseconds used for read operations
+| DEFAULT_WRITE_TIMEOUT | 500 | Sets the timeout in milliseconds used for write operations
 | INIT_RETRIES | 100 | How many times to try and send the initization command to the memory card
 | FULL_RETRIES | 5 | This sets the number of times the system will attempt to initialize the memory card
 | DISABLE_SPEED_SWITCH | Not defined | If defined, the card will remain at 400 kHz speeds for all communication. This will impact performance of read/write operations.
@@ -101,10 +108,6 @@ When a memory card is inserted, the program will initialize the card with the fu
 | ENFORCE_DATA_CRC | Defined | If defined, block reads with a bad CRC will fail
 
 **Note**: Petit FatFs has a set of macros to modify functionality and/or memory usage. See `pffconf.h` for more information.
-
-### Known Issues
-
-- On startup, the example will attempt to mount the memory card, even if one is not plugged in. 
 
 ## Summary
 

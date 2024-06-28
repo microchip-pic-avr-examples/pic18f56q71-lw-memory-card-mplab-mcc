@@ -197,6 +197,15 @@ bool memCard_initCard(void)
         {
             case CCS_LOW_CAPACITY:
                 printf("[DEBUG] Memory Card is small - use byte-mode addressing\r\n");
+                
+                //Set Block Size to 512B
+                //CMD16
+                status.data = memCard_sendCMD_R1(16, FAT_BLOCK_SIZE);
+                if (status.data != HEADER_NO_ERROR)
+                {
+                    printf("[WARN] Unable to set BLOCK SIZE\r\n");
+                }
+                
                 break;
             case CCS_HIGH_CAPACITY:
                 printf("[DEBUG] Memory Card is large - use LBA addressing\r\n");
@@ -204,27 +213,16 @@ bool memCard_initCard(void)
             default:
                 printf("[WARN] CMD58 was unable to determine capacity support\r\n");
         }
-#endif
-        
-        //Set Block Size to 512B
-        //CMD16
-        status.data = memCard_sendCMD_R1(16, FAT_BLOCK_SIZE);
-        if (status.data != HEADER_NO_ERROR)
-        {
-            printf("[WARN] Unable to set BLOCK SIZE\r\n");
-        }
-        
+#endif        
         //Card is now usable for memory operations
         cardStatus = STATUS_CARD_READY;
         printf("Memory Card - READY\r\n");
         
-#ifndef DISABLE_SPEED_SWITCH
         //Set SPI Frequency
-        if (!memCard_setupFastSPI())
+        if (!memCard_setupTimings())
         {
             printf("[WARN] Unable to detect max SPI clock speeds\r\n");
         }
-#endif
         
         //Load Block 0 into the cache
         memCard_readBlock(0x00);
@@ -250,7 +248,7 @@ bool memCard_isCardReady(void)
 }
 
 //Requests max clock speed info from card, and sets SPI frequency
-bool memCard_setupFastSPI(void)
+bool memCard_setupTimings(void)
 {
     uint8_t resp[16];
     fastBaud = SPI_400KHZ_BAUD;
@@ -259,6 +257,12 @@ bool memCard_setupFastSPI(void)
     if (memCard_readCSD(&resp[0]) != CARD_NO_ERROR)
     {
         return false;
+    }
+    
+    //Add clocks between CMDs to improve compatability
+    for (uint8_t i = 0; i < MEMORY_CARD_IDLE_CLOCK_CYCLES; i++)
+    {
+        SPI1_sendByte(0xFF);
     }
     
     uint8_t tSpeed = resp[3];
@@ -497,8 +501,11 @@ CommandError memCard_configureCard(void)
 //Command must be in R1 Response Format
 uint8_t memCard_sendCMD_R1(uint8_t commandIndex, uint32_t data)
 {
-    //Send an extra byte to help the controller between commands
-    SPI1_sendByte(0xFF);
+    //Add clocks between CMDs to improve compatability
+    for (uint8_t i = 0; i < MEMORY_CARD_IDLE_CLOCK_CYCLES; i++)
+    {
+        SPI1_sendByte(0xFF);
+    }
     
     uint8_t memPool[6];
     
@@ -597,8 +604,11 @@ CommandError memCard_readOCR(uint8_t* data)
     if (cardStatus == STATUS_CARD_NONE)
         return CARD_NOT_INIT;
     
-    //Send an extra byte to help the controller between commands
-    SPI1_sendByte(0xFF);
+    //Add clocks between CMDs to improve compatability
+    for (uint8_t i = 0; i < MEMORY_CARD_IDLE_CLOCK_CYCLES; i++)
+    {
+        SPI1_sendByte(0xFF);
+    }
     
     uint8_t memPoolTx[6];
     
@@ -665,6 +675,12 @@ CommandError memCard_readCSD(uint8_t* data)
 {
     if (cardStatus != STATUS_CARD_READY)
         return CARD_NOT_INIT;
+    
+    //Add clocks between CMDs to improve compatability
+    for (uint8_t i = 0; i < MEMORY_CARD_IDLE_CLOCK_CYCLES; i++)
+    {
+        SPI1_sendByte(0xFF);
+    }
     
     //Send CSD read command
     //CMD9
@@ -854,6 +870,12 @@ CommandError memCard_writeBlock(void)
         return CARD_WRITE_SIZE_ERROR;
     }
     
+    //Add clocks between CMDs to improve compatability
+    for (uint8_t i = 0; i < MEMORY_CARD_IDLE_CLOCK_CYCLES; i++)
+    {
+        SPI1_sendByte(0xFF);
+    }
+    
 #ifdef MEM_CARD_FILE_DEBUG_ENABLE
     printf("[DEBUG FILE I/O] Writing %u bytes to sector %lu \r\n", writeSize, cacheBlockAddr);
 #endif
@@ -935,11 +957,17 @@ CommandError memCard_writeBlock(void)
     
     //Receive Data Response
     RespToken eToken;
-    uint8_t rCount = 0;
     bool good = false;
     
     //Return to 400 kHz base
     SPI1_setSpeed(SPI_400KHZ_BAUD);
+    
+    //Configure and Start Timeout Timer
+    TU16A_PeriodValueSet(DEFAULT_WRITE_TIMEOUT);
+    TU16A_Start();
+    
+    //Wait for timer to start
+    while (!TU16A_IsTimerRunning());
     
     do 
     {
@@ -951,10 +979,10 @@ CommandError memCard_writeBlock(void)
             good = true;
         }
         
-        rCount++;
-    } while ((rCount < WRITE_TIMEOUT_BYTES) && (!good));
+    } while ((TU16A_IsTimerRunning()) && (!good));
+    TU16A_Stop();
     
-    if (rCount >= WRITE_TIMEOUT_BYTES)
+    if (!good)
     {
         CARD_CS_SetHigh();
         return CARD_SPI_TIMEOUT;
@@ -1032,6 +1060,12 @@ CommandError memCard_readBlock(uint32_t blockAddr)
     }
 #endif
     
+    //Add clocks between CMDs to improve compatability
+    for (uint8_t i = 0; i < MEMORY_CARD_IDLE_CLOCK_CYCLES; i++)
+    {
+        SPI1_sendByte(0xFF);
+    }
+    
 #ifdef MEM_CARD_FILE_DEBUG_ENABLE
     printf("[DEBUG FILE I/O] Fetching Sector %lu\r\n", blockAddr);
 #endif
@@ -1106,9 +1140,15 @@ CommandError memCard_receiveBlockData(uint8_t* data, uint16_t length)
     //Data Header
     RespToken eToken;
     eToken.data = 0xFF;
-    uint8_t rCount = 0;
     bool good = false;
 
+    //Configure and Start Timeout Timer
+    TU16A_PeriodValueSet(DEFAULT_READ_TIMEOUT);
+    TU16A_Start();
+    
+    //Wait for Timer to Start
+    while (!TU16A_IsTimerRunning());
+    
     do 
     {
         eToken.data = SPI1_exchangeByte(0xFF);
@@ -1119,10 +1159,10 @@ CommandError memCard_receiveBlockData(uint8_t* data, uint16_t length)
             good = true;
         }
         
-        rCount++;
-    } while ((rCount < READ_TIMEOUT_BYTES) && (!good));
+    } while ((TU16A_IsTimerRunning()) && (!good));
+    TU16A_Stop();
     
-    if (rCount >= READ_TIMEOUT_BYTES)
+    if (!good)
     {
         return CARD_SPI_TIMEOUT;
     }

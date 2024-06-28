@@ -5,12 +5,12 @@
  * 
  * @defgroup uart_types UART_TYPES
  * 
- * @brief This file contains APIs for UART module.
+ * @brief This file contains the enumeration of different Universal Asynchronous Receiver and Transmitter (UART) baud rates.
  *
- * @version UART Driver Version 3.0.0
+ * @version UART Driver Version 3.0.1
 */
 /*
-© [2023] Microchip Technology Inc. and its subsidiaries.
+© [2024] Microchip Technology Inc. and its subsidiaries.
 
     Subject to your compliance with these terms, you may use Microchip 
     software and any derivatives exclusively with Microchip products. 
