@@ -4,7 +4,7 @@
 
 # Petit FatFs on a Memory Card with PIC18F56Q71
 
-[Petit FatFs](http://elm-chan.org/fsw/ff/00index_p.html) is a lightweight, open-source library for File Allocation Table (FAT) file systems. This example features a memory card interface and implements the Petit FatFs library to access the FAT file system on the card with the PIC18F56Q71 microcontroller.  
+[Petit FatFs](http://elm-chan.org/fsw/ff/00index_p.html) is a lightweight, open-source library for File Allocation Table (FAT) file systems. This example features a memory card interface and implements the Petit FatFs library to access the FAT file system on the card via the PIC18F56Q71 microcontroller.  
 
 ## Related Examples
 
@@ -35,7 +35,7 @@
 
 - Significantly improved compatability with memory cards
 - Modified time-outs to match specification
-- Upgraded XC8 / MPALB X / MCC Versions
+- Upgraded XC8/MPALB X/MCC Versions
 - Reduced max clock frequency from 10.4 MHz to 8 MHz to improve compatability
 
 ## Setup
@@ -52,7 +52,7 @@ Before use, format the memory card as a FAT volume. Create a file called `test.t
 
 These steps are required since Petit FatFs cannot resize or create a file. This means the file needs to be large enough to contain the full text written at run-time. A copy of `test.txt` is also included in the repository. 
 
-**Note**: This example supports hot-swapping memory cards, and does not require the card to be installed on power-up.  
+**Note**: This example supports hot-swapping memory cards and does not require the card to be installed on power-up.  
 
 ### UART Setup
 
@@ -100,9 +100,9 @@ When a memory card is inserted, the program will initialize the card with the fu
 | MEM_CARD_DISABLE_CACHE | Not defined | Disables file system caching, at a cost to performance. Use for debugging only.
 | MEMORY_CARD_IDLE_CLOCK_CYCLES | 10 | Sets the number of dummy bytes to send between commands
 | R1_TIMEOUT_BYTES | 10 | How many bytes to wait for a valid response code
-| DEFAULT_READ_TIMEOUT | 250 | Sets the timeout in milliseconds used for read operations
-| DEFAULT_WRITE_TIMEOUT | 500 | Sets the timeout in milliseconds used for write operations
-| INIT_RETRIES | 100 | How many times to try and send the initization command to the memory card
+| DEFAULT_READ_TIMEOUT | 250 | Sets the time-out in milliseconds used for read operations
+| DEFAULT_WRITE_TIMEOUT | 500 | Sets the time-out in milliseconds used for write operations
+| INIT_RETRIES | 100 | How many times to try and send the initialization command to the memory card
 | FULL_RETRIES | 5 | This sets the number of times the system will attempt to initialize the memory card
 | DISABLE_SPEED_SWITCH | Not defined | If defined, the card will remain at 400 kHz speeds for all communication. This will impact performance of read/write operations.
 | CRC_VALIDATE_READ | Defined | If defined, block reads will verify the Cyclic Redundancy Check (CRC) of the data. **To reject bad data, set ENFORCE_DATA_CRC.**
