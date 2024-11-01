@@ -44,6 +44,8 @@
 
 With the power off, plug in the Curiosity Nano into the adapter board. Put the MICROSD Click in slot 1.
 
+![Click Setup](./images/setup.JPG)  
+
 ### Memory Card Setup
 
 Before use, format the memory card as a FAT volume. Create a file called `test.txt` on the disk. In the file on the disk, type the following message:
